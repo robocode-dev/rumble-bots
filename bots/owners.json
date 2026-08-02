@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "owners": [
+    {
+      "ownerId": "flemming-n-larsen",
+      "accounts": [
+        "flemming-n-larsen"
+      ],
+      "bots": [
+        "Orbit"
+      ],
+      "activeSlots": 1
+    }
+  ]
+}

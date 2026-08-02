@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-02T14:52:08Z",
+  "commit": "local",
+  "bots": [
+    {
+      "name": "Orbit",
+      "version": "1.0.2",
+      "platform": "Python",
+      "path": "bots/python/Orbit",
+      "sourceHash": "sha256:86b63e60f231c8f736ec7dc7867c93966a59a63bb3409326516879236555cf36",
+      "owner": "flemming-n-larsen",
+      "authors": [
+        "Tank Royale Rumble maintainers"
+      ],
+      "addedAt": "2026-08-02",
+      "status": "active"
+    }
+  ]
+}
