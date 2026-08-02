@@ -139,11 +139,18 @@ def check_governance(bots: list[Bot], root: Path, owner: str) -> None:
     disqualified_names = {entry["bot"] for entry in banned.get("disqualifiedBots", [])}
     if owner in banned_accounts:
         raise ValidationError(f"owner `{owner}` is banned from submissions")
-    known_names: dict[str, str] = {name: record["ownerId"] for record in owners.get("owners", []) for name in record.get("bots", [])}
     catalog_entries = read_json(root / "bots" / "index.json").get("bots", []) if (root / "bots" / "index.json").exists() else []
     catalog_by_name = {entry["name"]: entry for entry in catalog_entries if entry.get("status") == "active"}
+    submitted_bots = [
+        bot
+        for bot in bots
+        if (previous := catalog_by_name.get(bot.name)) is None
+        or previous.get("version") != bot.config["version"]
+        or previous.get("sourceHash") != bot.source_hash
+    ]
+    owner_by_bot = {name: record for record in owners.get("owners", []) for name in record.get("bots", [])}
     seen_skeletons: dict[str, str] = {}
-    for bot in bots:
+    for bot in submitted_bots:
         if bot.name in disqualified_names:
             raise ValidationError(f"bot `{bot.name}` is disqualified")
         bot_skeleton = skeleton(bot.name)
@@ -151,15 +158,16 @@ def check_governance(bots: list[Bot], root: Path, owner: str) -> None:
         if previous is not None and previous != bot.name:
             raise ValidationError(f"bot `{bot.name}` is confusable with `{previous}`")
         seen_skeletons[bot_skeleton] = bot.name
-        existing_owner = known_names.get(bot.name)
-        if existing_owner is not None and existing_owner != owner:
-            raise ValidationError(f"bot `{bot.name}` belongs to owner `{existing_owner}`")
+        existing_owner = owner_by_bot.get(bot.name)
+        if existing_owner is not None and owner not in existing_owner.get("accounts", []):
+            raise ValidationError(f"bot `{bot.name}` belongs to owner `{existing_owner['ownerId']}`")
         previous = catalog_by_name.get(bot.name)
         if previous is not None and previous.get("version") == bot.config["version"] and previous.get("sourceHash") != bot.source_hash:
             raise ValidationError(f"bot `{bot.name}` changed source without increasing its version")
     active_by_owner: dict[str, int] = {}
-    for bot in bots:
-        active_by_owner[known_names.get(bot.name, owner)] = active_by_owner.get(known_names.get(bot.name, owner), 0) + 1
+    for bot in submitted_bots:
+        if bot.name not in owner_by_bot:
+            active_by_owner[owner] = active_by_owner.get(owner, 0) + 1
     if active_by_owner.get(owner, 0) > 5:
         raise ValidationError(f"owner `{owner}` exceeds the five active bot slot limit")
 
@@ -172,10 +180,28 @@ def generated_catalog(bots: list[Bot], root: Path, owner: str) -> tuple[dict[str
     for bot in bots:
         bot_owner = owner_by_bot.get(bot.name, owner)
         records.setdefault(bot_owner, []).append(bot.name)
-    owners = {record["ownerId"]: set(record.get("bots", [])) for record in existing_owners.get("owners", [])}
+    owners = {
+        record["ownerId"]: {
+            "accounts": record.get("accounts", []),
+            "bots": set(record.get("bots", [])),
+        }
+        for record in existing_owners.get("owners", [])
+    }
     for owner_id, names in records.items():
-        owners.setdefault(owner_id, set()).update(names)
-    owner_data = {"schemaVersion": 1, "owners": [{"ownerId": owner_id, "accounts": [owner_id], "bots": sorted(names), "activeSlots": len(names)} for owner_id, names in sorted(owners.items())]}
+        owner_record = owners.setdefault(owner_id, {"accounts": [owner_id], "bots": set()})
+        owner_record["bots"].update(names)
+    owner_data = {
+        "schemaVersion": 1,
+        "owners": [
+            {
+                "ownerId": owner_id,
+                "accounts": owner_record["accounts"],
+                "bots": sorted(owner_record["bots"]),
+                "activeSlots": len(owner_record["bots"]),
+            }
+            for owner_id, owner_record in sorted(owners.items())
+        ],
+    }
     today = datetime.now(UTC).date().isoformat()
     current_by_name = {bot.name: bot for bot in bots}
     history = []
