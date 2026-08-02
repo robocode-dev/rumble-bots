@@ -1,0 +1,10 @@
+{
+  "name": "Orbit",
+  "version": "1.0.2",
+  "authors": ["Tank Royale Rumble maintainers"],
+  "description": "Minimal source-run validation bot.",
+  "platform": "Python",
+  "programmingLang": "Python 3",
+  "gameTypes": ["1v1", "melee", "twinduel"],
+  "license": "Apache-2.0"
+}

@@ -1,0 +1,18 @@
+name: Bug report
+description: Report a validator, catalog, or governance problem.
+title: "bug: "
+labels: [bug]
+body:
+  - type: textarea
+    id: observed
+    attributes:
+      label: What happened?
+      description: Include the validator command and its complete diagnostic. Do not include secrets.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true

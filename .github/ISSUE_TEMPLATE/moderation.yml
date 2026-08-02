@@ -1,0 +1,12 @@
+name: Moderation request
+description: Report an ownership, licensing, safety, or conduct concern privately where possible.
+title: "moderation: "
+labels: [moderation]
+body:
+  - type: textarea
+    id: concern
+    attributes:
+      label: Concern
+      description: Describe the bot or account involved and the relevant evidence. Do not disclose personal data unnecessarily.
+    validations:
+      required: true
