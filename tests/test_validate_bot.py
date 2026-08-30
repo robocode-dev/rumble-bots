@@ -73,8 +73,8 @@ class ValidatorIntegrationTests(unittest.TestCase):
         result = self.run_validator("--smoke", "--generate")
         self.assertEqual(0, result.returncode, result.stderr)
         catalog = json.loads((self.root / "bots" / "index.json").read_text(encoding="utf-8"))
-        active_entry = next(entry for entry in catalog["bots"] if entry["status"] == "active")
-        self.assertEqual("Orbit", active_entry["name"])
+        orbit = next(entry for entry in catalog["bots"] if entry["name"] == "Orbit")
+        self.assertEqual("active", orbit["status"])
 
     def test_invalid_license_is_rejected(self) -> None:
         config_path = self.root / "bots" / "python" / "Orbit" / "Orbit.json"
