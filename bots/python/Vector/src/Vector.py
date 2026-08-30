@@ -8,6 +8,7 @@ if os.environ.get("RUMBLE_SMOKE") == "1":
     raise SystemExit(0)
 
 from robocode_tank_royale.bot_api.bot import Bot
+from robocode_tank_royale.bot_api.events import ScannedBotEvent
 
 
 class Vector(Bot):
@@ -18,6 +19,12 @@ class Vector(Bot):
         while self.running:
             self.set_turn_right(30)
             self.forward(10_000)
+
+    def on_scanned_bot(self, event: ScannedBotEvent) -> None:
+        """Aim at the detected opponent and fire before continuing the scan."""
+        self.turn_gun_right(self.gun_bearing_to(float(event.x), float(event.y)))
+        self.fire(3)
+        self.rescan()
 
 
 def main() -> None:
