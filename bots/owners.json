@@ -7,9 +7,10 @@
         "flemming-n-larsen"
       ],
       "bots": [
-        "Orbit"
+        "Orbit",
+        "Vector"
       ],
-      "activeSlots": 1
+      "activeSlots": 2
     }
   ]
 }

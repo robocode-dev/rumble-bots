@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-30T20:12:35Z",
-  "commit": "8ba8c99094a932434d1f5c77ee0258805a9ffa18",
+  "generatedAt": "2026-08-30T21:00:45Z",
+  "commit": "564aabbbddce226097c73ccd60717f822f4e095b",
   "bots": [
     {
       "name": "Orbit",
@@ -14,6 +14,20 @@
         "Tank Royale Rumble maintainers"
       ],
       "addedAt": "2026-08-02",
+      "status": "active",
+      "teamMembers": []
+    },
+    {
+      "name": "Vector",
+      "version": "1.0.0",
+      "platform": "Python",
+      "path": "bots/python/Vector",
+      "sourceHash": "sha256:2704786593814706f62968f21432411ecf7da2569dcd4eb3310a956c9f259429",
+      "owner": "flemming-n-larsen",
+      "authors": [
+        "Tank Royale Rumble maintainers"
+      ],
+      "addedAt": "2026-08-30",
       "status": "active",
       "teamMembers": []
     }
