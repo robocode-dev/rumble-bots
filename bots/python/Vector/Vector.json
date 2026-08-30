@@ -1,0 +1,10 @@
+{
+  "name": "Vector",
+  "version": "1.0.0",
+  "authors": ["Tank Royale Rumble maintainers"],
+  "description": "A small source-only bot that drives in wide arcs across the arena.",
+  "platform": "Python",
+  "programmingLang": "Python 3",
+  "gameTypes": ["1v1", "melee", "twinduel"],
+  "license": "Apache-2.0"
+}
