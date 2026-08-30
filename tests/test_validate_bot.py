@@ -36,6 +36,18 @@ class ValidatorIntegrationTests(unittest.TestCase):
         config_path.unlink()
         (destination / f"{name}.json").write_text(json.dumps(config), encoding="utf-8")
 
+    def add_team(self, name: str, members: list[str]) -> None:
+        destination = self.root / "bots" / "python" / name
+        destination.mkdir()
+        config = {
+            "name": name,
+            "version": "1.0",
+            "authors": ["Test author"],
+            "license": "Apache-2.0",
+            "teamMembers": members,
+        }
+        (destination / f"{name}.json").write_text(json.dumps(config), encoding="utf-8")
+
     def test_valid_submission_generates_an_active_catalog_entry(self) -> None:
         result = self.run_validator("--smoke", "--generate")
         self.assertEqual(0, result.returncode, result.stderr)
@@ -93,6 +105,26 @@ class ValidatorIntegrationTests(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stderr)
         regenerated_owners = json.loads(owners_path.read_text(encoding="utf-8"))
         self.assertEqual(["primary", "secondary"], regenerated_owners["owners"][0]["accounts"])
+
+    def test_RBC004_IntegrationPositive_team_members_are_published_as_catalog_identities(self) -> None:
+        self.add_bot("Nova")
+        self.add_team("OrbitNova", ["Orbit", "Nova"])
+
+        result = self.run_validator("--generate")
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        catalog = json.loads((self.root / "bots" / "index.json").read_text(encoding="utf-8"))
+        entries = {entry["name"]: entry for entry in catalog["bots"] if entry["status"] == "active"}
+        self.assertEqual(["Orbit 1.0.2", "Nova 1.0.2"], entries["OrbitNova"]["teamMembers"])
+        self.assertEqual([], entries["Orbit"]["teamMembers"])
+
+    def test_RBC004_IntegrationNegative_unknown_team_member_is_rejected(self) -> None:
+        self.add_team("BrokenTeam", ["Orbit", "Missing"])
+
+        result = self.run_validator("--generate")
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("unknown team member `Missing`", result.stderr)
 
 
 if __name__ == "__main__":

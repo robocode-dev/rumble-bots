@@ -43,6 +43,19 @@ class Bot:
     def name(self) -> str:
         return str(self.config["name"])
 
+    @property
+    def display_name(self) -> str:
+        return f"{self.name} {self.config['version']}"
+
+    @property
+    def platform(self) -> str:
+        return PLATFORMS[self.platform_key][1]
+
+    @property
+    def team_member_names(self) -> list[str]:
+        value = self.config.get("teamMembers", [])
+        return list(value) if isinstance(value, list) else []
+
 
 def read_json(path: Path) -> dict[str, Any]:
     try:
@@ -82,17 +95,24 @@ def bot_directories(root: Path) -> list[tuple[str, Path]]:
 def validate_bot(platform_key: str, directory: Path, *, smoke: bool) -> Bot:
     source_extension, expected_platform, api_token = PLATFORMS[platform_key]
     config = read_json(directory / f"{directory.name}.json")
-    for field in ("name", "version", "authors", "platform", "license"):
+    for field in ("name", "version", "authors", "license"):
         if not config.get(field):
             raise ValidationError(f"{directory}: missing required `{field}` in {directory.name}.json")
     if config["name"] != directory.name:
         raise ValidationError(f"{directory}: directory name must equal config name `{config['name']}`")
-    if config["platform"] != expected_platform:
-        raise ValidationError(f"{directory}: `{platform_key}` entries require platform `{expected_platform}`")
     if not isinstance(config["authors"], list) or not all(isinstance(author, str) and author for author in config["authors"]):
         raise ValidationError(f"{directory}: `authors` must be a non-empty list of display names")
     if config["license"] not in ALLOWED_LICENSES:
         raise ValidationError(f"{directory}: `license` must be one of {', '.join(sorted(ALLOWED_LICENSES))}")
+    if "teamMembers" in config:
+        members = config["teamMembers"]
+        if not isinstance(members, list) or len(members) != 2 or not all(isinstance(member, str) and member for member in members):
+            raise ValidationError(f"{directory}: `teamMembers` must contain exactly two directory names")
+        return Bot(directory, platform_key, config, tree_hash(directory))
+    if not config.get("platform"):
+        raise ValidationError(f"{directory}: missing required `platform` in {directory.name}.json")
+    if config["platform"] != expected_platform:
+        raise ValidationError(f"{directory}: `{platform_key}` entries require platform `{expected_platform}`")
     for suffix in (".sh", ".cmd"):
         if not (directory / f"{directory.name}{suffix}").is_file():
             raise ValidationError(f"{directory}: missing required {directory.name}{suffix} boot script")
@@ -116,6 +136,17 @@ def validate_bot(platform_key: str, directory: Path, *, smoke: bool) -> Bot:
     if smoke:
         smoke_bot(bot)
     return bot
+
+
+def validate_team_members(bots: list[Bot]) -> None:
+    by_directory = {bot.directory: bot for bot in bots}
+    for team in (bot for bot in bots if bot.team_member_names):
+        for member_name in team.team_member_names:
+            member = by_directory.get(team.directory.parent / member_name)
+            if member is None:
+                raise ValidationError(f"{team.directory}: unknown team member `{member_name}`")
+            if member.team_member_names:
+                raise ValidationError(f"{team.directory}: team member `{member_name}` cannot be another team")
 
 
 def smoke_bot(bot: Bot) -> None:
@@ -212,9 +243,11 @@ def generated_catalog(bots: list[Bot], root: Path, owner: str) -> tuple[dict[str
         elif current is None:
             history.append(entry)
     active = []
+    by_directory = {bot.directory: bot for bot in bots}
     for bot in sorted(bots, key=lambda item: item.name.casefold()):
         previous = next((entry for entry in existing_catalog.get("bots", []) if entry.get("name") == bot.name and entry.get("version") == bot.config["version"]), None)
-        active.append({"name": bot.name, "version": bot.config["version"], "platform": bot.config["platform"], "path": bot.directory.relative_to(root).as_posix(), "sourceHash": bot.source_hash, "owner": owner_by_bot.get(bot.name, owner), "authors": bot.config["authors"], "addedAt": previous.get("addedAt", today) if previous else today, "status": "active"})
+        team_members = [by_directory[bot.directory.parent / name].display_name for name in bot.team_member_names]
+        active.append({"name": bot.name, "version": bot.config["version"], "platform": bot.platform, "path": bot.directory.relative_to(root).as_posix(), "sourceHash": bot.source_hash, "owner": owner_by_bot.get(bot.name, owner), "authors": bot.config["authors"], "addedAt": previous.get("addedAt", today) if previous else today, "status": "active", "teamMembers": team_members})
     catalog = {"schemaVersion": 1, "generatedAt": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"), "commit": os.environ.get("GITHUB_SHA", "local"), "bots": history + active}
     return catalog, owner_data
 
@@ -229,6 +262,7 @@ def main() -> int:
     root = arguments.root.resolve()
     try:
         bots = [validate_bot(platform, directory, smoke=arguments.smoke) for platform, directory in bot_directories(root)]
+        validate_team_members(bots)
         check_governance(bots, root, arguments.owner)
         if arguments.generate:
             catalog, owners = generated_catalog(bots, root, arguments.owner)
