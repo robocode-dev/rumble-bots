@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-03T16:20:56Z",
-  "commit": "bd8b57af87b4ee5c57f8f2df426abfe633a9b675",
+  "generatedAt": "2026-08-30T20:12:35Z",
+  "commit": "8ba8c99094a932434d1f5c77ee0258805a9ffa18",
   "bots": [
     {
       "name": "Orbit",
@@ -14,7 +14,8 @@
         "Tank Royale Rumble maintainers"
       ],
       "addedAt": "2026-08-02",
-      "status": "active"
+      "status": "active",
+      "teamMembers": []
     }
   ]
 }
