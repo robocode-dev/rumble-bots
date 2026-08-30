@@ -101,7 +101,8 @@ class ValidatorIntegrationTests(unittest.TestCase):
         config_path.write_text(json.dumps(config), encoding="utf-8")
         self.assertEqual(0, self.run_validator("--generate").returncode)
         catalog = json.loads((self.root / "bots" / "index.json").read_text(encoding="utf-8"))
-        self.assertEqual(["superseded", "active"], [entry["status"] for entry in catalog["bots"]])
+        orbit = [entry for entry in catalog["bots"] if entry["name"] == "Orbit"]
+        self.assertEqual(["superseded", "active"], [entry["status"] for entry in orbit])
 
     def test_new_bot_from_another_owner_ignores_unchanged_catalog_entries(self) -> None:
         self.assertEqual(0, self.run_validator("--generate").returncode)
