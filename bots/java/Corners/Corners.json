@@ -1,0 +1,10 @@
+{
+  "name": "Corners",
+  "version": "1.0.0",
+  "authors": ["Mathew Nelson", "Flemming N. Larsen"],
+  "description": "Moves to a corner, then swings the gun back and forth. If it dies, it tries a new corner in the next round.",
+  "platform": "JVM",
+  "programmingLang": "Java 17",
+  "gameTypes": ["1v1", "melee", "twinduel"],
+  "license": "Apache-2.0"
+}
