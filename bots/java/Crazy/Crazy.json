@@ -1,0 +1,10 @@
+{
+  "name": "Crazy",
+  "version": "1.0.0",
+  "authors": ["Mathew Nelson", "Flemming N. Larsen"],
+  "description": "Moves in a zigzag pattern, bouncing off walls, and fires at every bot it scans.",
+  "platform": "JVM",
+  "programmingLang": "Java 17",
+  "gameTypes": ["1v1", "melee", "twinduel"],
+  "license": "Apache-2.0"
+}
