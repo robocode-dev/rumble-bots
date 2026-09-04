@@ -1,0 +1,10 @@
+{
+  "name": "SpinBot",
+  "version": "1.0.0",
+  "authors": ["Mathew Nelson", "Flemming N. Larsen"],
+  "description": "Continuously moves in a circle while firing at maximum power at any bot it detects.",
+  "platform": "JVM",
+  "programmingLang": "Java 17",
+  "gameTypes": ["1v1", "melee", "twinduel"],
+  "license": "Apache-2.0"
+}
