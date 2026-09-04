@@ -7,10 +7,12 @@
         "flemming-n-larsen"
       ],
       "bots": [
+        "Corners",
+        "Crazy",
         "Orbit",
         "Vector"
       ],
-      "activeSlots": 2
+      "activeSlots": 4
     }
   ]
 }

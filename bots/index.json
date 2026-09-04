@@ -1,8 +1,38 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-30T21:00:45Z",
-  "commit": "564aabbbddce226097c73ccd60717f822f4e095b",
+  "generatedAt": "2026-09-04T15:45:13Z",
+  "commit": "50e3044dfec0aec6ed294b2c71953515e49810e1",
   "bots": [
+    {
+      "name": "Corners",
+      "version": "1.0.0",
+      "platform": "JVM",
+      "path": "bots/java/Corners",
+      "sourceHash": "sha256:404ca740fec5bb93fe5b19fd9dcc6b138a9c5aa8d876513159258ae72aeb91ec",
+      "owner": "flemming-n-larsen",
+      "authors": [
+        "Mathew Nelson",
+        "Flemming N. Larsen"
+      ],
+      "addedAt": "2026-09-04",
+      "status": "active",
+      "teamMembers": []
+    },
+    {
+      "name": "Crazy",
+      "version": "1.0.0",
+      "platform": "JVM",
+      "path": "bots/java/Crazy",
+      "sourceHash": "sha256:bc813c792d71e227c5993fb26acfff036da5f46d56d0381ca443a8706041a156",
+      "owner": "flemming-n-larsen",
+      "authors": [
+        "Mathew Nelson",
+        "Flemming N. Larsen"
+      ],
+      "addedAt": "2026-09-04",
+      "status": "active",
+      "teamMembers": []
+    },
     {
       "name": "Orbit",
       "version": "1.0.2",
