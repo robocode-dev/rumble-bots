@@ -10,9 +10,10 @@
         "Corners",
         "Crazy",
         "Orbit",
+        "SpinBot",
         "Vector"
       ],
-      "activeSlots": 4
+      "activeSlots": 5
     }
   ]
 }

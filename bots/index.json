@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-04T15:45:13Z",
-  "commit": "50e3044dfec0aec6ed294b2c71953515e49810e1",
+  "generatedAt": "2026-09-04T15:45:48Z",
+  "commit": "84019c58e2a3423f08631dd4b3b6b3b48dd66a77",
   "bots": [
     {
       "name": "Corners",
@@ -44,6 +44,21 @@
         "Tank Royale Rumble maintainers"
       ],
       "addedAt": "2026-08-02",
+      "status": "active",
+      "teamMembers": []
+    },
+    {
+      "name": "SpinBot",
+      "version": "1.0.0",
+      "platform": "JVM",
+      "path": "bots/java/SpinBot",
+      "sourceHash": "sha256:5a346701b5d65c11d5e691ea9d272da33bce5eca8c67d252c0db710faba9a695",
+      "owner": "flemming-n-larsen",
+      "authors": [
+        "Mathew Nelson",
+        "Flemming N. Larsen"
+      ],
+      "addedAt": "2026-09-04",
       "status": "active",
       "teamMembers": []
     },
