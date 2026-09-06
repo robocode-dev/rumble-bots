@@ -1,7 +1,7 @@
 {
   "name": "Vector",
-  "version": "1.0.0",
-  "authors": ["Tank Royale Rumble maintainers"],
+  "version": "1.1.1",
+  "authors": ["Flemming N. Larsen"],
   "description": "A small source-only bot that drives in wide arcs across the arena.",
   "platform": "Python",
   "programmingLang": "Python 3",
