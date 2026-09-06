@@ -1,8 +1,36 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-04T15:45:48Z",
-  "commit": "84019c58e2a3423f08631dd4b3b6b3b48dd66a77",
+  "generatedAt": "2026-09-06T20:18:09Z",
+  "commit": "9632a0ec56240ccd3c14d00863c1d866bdb6a2de",
   "bots": [
+    {
+      "name": "Orbit",
+      "version": "1.0.2",
+      "platform": "Python",
+      "path": "bots/python/Orbit",
+      "sourceHash": "sha256:86b63e60f231c8f736ec7dc7867c93966a59a63bb3409326516879236555cf36",
+      "owner": "flemming-n-larsen",
+      "authors": [
+        "Tank Royale Rumble maintainers"
+      ],
+      "addedAt": "2026-08-02",
+      "status": "superseded",
+      "teamMembers": []
+    },
+    {
+      "name": "Vector",
+      "version": "1.0.0",
+      "platform": "Python",
+      "path": "bots/python/Vector",
+      "sourceHash": "sha256:2704786593814706f62968f21432411ecf7da2569dcd4eb3310a956c9f259429",
+      "owner": "flemming-n-larsen",
+      "authors": [
+        "Tank Royale Rumble maintainers"
+      ],
+      "addedAt": "2026-08-30",
+      "status": "superseded",
+      "teamMembers": []
+    },
     {
       "name": "Corners",
       "version": "1.0.0",
@@ -35,15 +63,15 @@
     },
     {
       "name": "Orbit",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "platform": "Python",
       "path": "bots/python/Orbit",
-      "sourceHash": "sha256:86b63e60f231c8f736ec7dc7867c93966a59a63bb3409326516879236555cf36",
+      "sourceHash": "sha256:8b68aac7974a794a06596cf167d2342f4bdf8501094fe29a514696cd1037f8f8",
       "owner": "flemming-n-larsen",
       "authors": [
-        "Tank Royale Rumble maintainers"
+        "Flemming N. Larsen"
       ],
-      "addedAt": "2026-08-02",
+      "addedAt": "2026-09-06",
       "status": "active",
       "teamMembers": []
     },
@@ -64,15 +92,15 @@
     },
     {
       "name": "Vector",
-      "version": "1.0.0",
+      "version": "1.1.1",
       "platform": "Python",
       "path": "bots/python/Vector",
-      "sourceHash": "sha256:2704786593814706f62968f21432411ecf7da2569dcd4eb3310a956c9f259429",
+      "sourceHash": "sha256:8901cc77f6fee715b748d3960e2eb629867a07a527cbfb9a32f0af627f8a4663",
       "owner": "flemming-n-larsen",
       "authors": [
-        "Tank Royale Rumble maintainers"
+        "Flemming N. Larsen"
       ],
-      "addedAt": "2026-08-30",
+      "addedAt": "2026-09-06",
       "status": "active",
       "teamMembers": []
     }
