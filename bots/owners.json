@@ -8,12 +8,13 @@
       ],
       "bots": [
         "Corners",
+        "CornersCrazy",
         "Crazy",
         "Orbit",
         "SpinBot",
         "Vector"
       ],
-      "activeSlots": 5
+      "activeSlots": 6
     }
   ]
 }
