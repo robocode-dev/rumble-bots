@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -199,6 +200,14 @@ class ValidatorIntegrationTests(unittest.TestCase):
             expected.update(content)
             expected.update(b"\0")
         self.assertEqual(f"sha256:{expected.hexdigest()}", tree_hash(directory))
+
+    @unittest.skipUnless(os.name == "posix", "the executable bit is only meaningful on POSIX")
+    def test_non_executable_boot_script_is_rejected(self) -> None:
+        script = self.root / "bots" / "python" / "Orbit" / "Orbit.sh"
+        script.chmod(script.stat().st_mode & ~0o111)
+        result = self.run_validator()
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("executable bit", result.stderr)
 
     def test_RBC004_IntegrationNegative_duplicate_bot_names_across_platforms_are_rejected(self) -> None:
         self.add_java_bot("Orbit")

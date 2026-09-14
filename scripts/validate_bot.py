@@ -124,8 +124,13 @@ def validate_bot(platform_key: str, directory: Path, *, smoke: bool) -> Bot:
     if config["platform"] != expected_platform:
         raise ValidationError(f"{directory}: `{platform_key}` entries require platform `{expected_platform}`")
     for suffix in (".sh", ".cmd"):
-        if not (directory / f"{directory.name}{suffix}").is_file():
+        script = directory / f"{directory.name}{suffix}"
+        if not script.is_file():
             raise ValidationError(f"{directory}: missing required {directory.name}{suffix} boot script")
+        # The smoke check below runs `sh script.sh` directly, which does not need the executable
+        # bit, but Tank Royale's real booter execs the script itself and requires it.
+        if suffix == ".sh" and not os.access(script, os.X_OK):
+            raise ValidationError(f"{directory}: {directory.name}.sh must be committed with the executable bit set")
     source_files = list(directory.rglob(f"*{source_extension}"))
     if not source_files:
         raise ValidationError(f"{directory}: no {source_extension} source file found")
