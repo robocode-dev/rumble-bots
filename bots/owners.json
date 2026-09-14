@@ -11,10 +11,11 @@
         "CornersCrazy",
         "Crazy",
         "Orbit",
+        "OrbitVector",
         "SpinBot",
         "Vector"
       ],
-      "activeSlots": 6
+      "activeSlots": 7
     }
   ]
 }

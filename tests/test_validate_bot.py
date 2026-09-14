@@ -98,15 +98,17 @@ class ValidatorIntegrationTests(unittest.TestCase):
         self.assertIn("without increasing its version", result.stderr)
 
     def test_version_increase_supersedes_the_previous_catalog_entry(self) -> None:
+        # SpinBot has no team member depending on it, unlike Orbit (OrbitVector) and
+        # Corners/Crazy (CornersCrazy), so bumping its version here can't break a team identity.
         self.assertEqual(0, self.run_validator("--generate").returncode)
-        config_path = self.root / "bots" / "python" / "Orbit" / "Orbit.json"
+        config_path = self.root / "bots" / "java" / "SpinBot" / "SpinBot.json"
         config = json.loads(config_path.read_text(encoding="utf-8"))
         config["version"] = "1.0.4"
         config_path.write_text(json.dumps(config), encoding="utf-8")
         self.assertEqual(0, self.run_validator("--generate").returncode)
         catalog = json.loads((self.root / "bots" / "index.json").read_text(encoding="utf-8"))
-        orbit = [entry for entry in catalog["bots"] if entry["name"] == "Orbit"]
-        self.assertEqual(["superseded", "active"], [entry["status"] for entry in orbit])
+        spinbot = [entry for entry in catalog["bots"] if entry["name"] == "SpinBot"]
+        self.assertEqual(["superseded", "active"], [entry["status"] for entry in spinbot])
 
     def test_new_bot_from_another_owner_ignores_unchanged_catalog_entries(self) -> None:
         self.assertEqual(0, self.run_validator("--generate").returncode)
@@ -123,7 +125,7 @@ class ValidatorIntegrationTests(unittest.TestCase):
         owners["owners"][0]["ownerId"] = "primary"
         owners["owners"][0]["accounts"] = ["primary", "secondary"]
         owners_path.write_text(json.dumps(owners), encoding="utf-8")
-        config_path = self.root / "bots" / "python" / "Orbit" / "Orbit.json"
+        config_path = self.root / "bots" / "java" / "SpinBot" / "SpinBot.json"
         config = json.loads(config_path.read_text(encoding="utf-8"))
         config["version"] = "1.0.4"
         config_path.write_text(json.dumps(config), encoding="utf-8")
