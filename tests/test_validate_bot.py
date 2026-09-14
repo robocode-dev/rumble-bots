@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 import subprocess
@@ -10,6 +11,8 @@ from pathlib import Path
 
 REPOSITORY = Path(__file__).parents[1]
 VALIDATOR = REPOSITORY / "scripts" / "validate_bot.py"
+sys.path.insert(0, str(REPOSITORY / "scripts"))
+from validate_bot import tree_hash  # noqa: E402
 
 
 class ValidatorIntegrationTests(unittest.TestCase):
@@ -180,6 +183,22 @@ class ValidatorIntegrationTests(unittest.TestCase):
         entries = {entry["name"]: entry for entry in catalog["bots"] if entry["status"] == "active"}
         self.assertEqual(["Orbit 1.0.3", "Comet 1.0.2"], entries["OrbitComet"]["teamMembers"])
         self.assertEqual("Mixed", entries["OrbitComet"]["platform"])
+
+    def test_tree_hash_orders_files_by_posix_path_regardless_of_platform(self) -> None:
+        # Path.__lt__ is case-insensitive on Windows and case-sensitive on POSIX, so a plain
+        # `sorted(Path...)` would order "src/Nested.py" before "Top.cmd" on Windows but after it
+        # on POSIX, producing different hashes for identical content depending on the host OS.
+        directory = self.root / "bots" / "python" / "OrderCheck"
+        (directory / "src").mkdir(parents=True)
+        (directory / "Top.cmd").write_text("cmd", encoding="utf-8")
+        (directory / "src" / "Nested.py").write_text("nested", encoding="utf-8")
+        expected = hashlib.sha256()
+        for relative, content in (("Top.cmd", b"cmd"), ("src/Nested.py", b"nested")):
+            expected.update(relative.encode("utf-8"))
+            expected.update(b"\0")
+            expected.update(content)
+            expected.update(b"\0")
+        self.assertEqual(f"sha256:{expected.hexdigest()}", tree_hash(directory))
 
     def test_RBC004_IntegrationNegative_duplicate_bot_names_across_platforms_are_rejected(self) -> None:
         self.add_java_bot("Orbit")

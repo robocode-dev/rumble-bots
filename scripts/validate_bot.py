@@ -78,7 +78,10 @@ def skeleton(name: str) -> str:
 
 def tree_hash(directory: Path) -> str:
     digest = hashlib.sha256()
-    for path in sorted(candidate for candidate in directory.rglob("*") if candidate.is_file() and "__pycache__" not in candidate.parts):
+    candidates = (candidate for candidate in directory.rglob("*") if candidate.is_file() and "__pycache__" not in candidate.parts)
+    # Path.__lt__ is platform-dependent (case-insensitive on Windows, case-sensitive on POSIX),
+    # so sort by an explicit posix-relative-path string to keep this hash stable across platforms.
+    for path in sorted(candidates, key=lambda candidate: candidate.relative_to(directory).as_posix()):
         digest.update(path.relative_to(directory).as_posix().encode("utf-8"))
         digest.update(b"\0")
         digest.update(path.read_bytes())

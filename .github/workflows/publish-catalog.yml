@@ -7,6 +7,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: publish-catalog
+  cancel-in-progress: false
+
 jobs:
   publish:
     if: github.event.pull_request.merged && github.event.pull_request.base.ref == 'main'
