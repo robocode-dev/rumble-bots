@@ -134,19 +134,19 @@ class ValidatorIntegrationTests(unittest.TestCase):
 
     def test_RBC004_IntegrationPositive_team_members_are_published_as_catalog_identities(self) -> None:
         self.add_bot("Nova")
-        self.add_team("OrbitNova", ["Orbit 1.0.3", "Nova 1.0.3"])
+        self.add_team("OrbitNova", ["Orbit 1.0.0", "Nova 1.0.0"])
 
         result = self.run_validator("--generate")
 
         self.assertEqual(0, result.returncode, result.stderr)
         catalog = json.loads((self.root / "bots" / "index.json").read_text(encoding="utf-8"))
         entries = {entry["name"]: entry for entry in catalog["bots"] if entry["status"] == "active"}
-        self.assertEqual(["Orbit 1.0.3", "Nova 1.0.3"], entries["OrbitNova"]["teamMembers"])
+        self.assertEqual(["Orbit 1.0.0", "Nova 1.0.0"], entries["OrbitNova"]["teamMembers"])
         self.assertEqual("Python", entries["OrbitNova"]["platform"])
         self.assertEqual([], entries["Orbit"]["teamMembers"])
 
     def test_RBC004_IntegrationNegative_unknown_team_member_is_rejected(self) -> None:
-        self.add_team("BrokenTeam", ["Orbit 1.0.3", "Missing 1.0"])
+        self.add_team("BrokenTeam", ["Orbit 1.0.0", "Missing 1.0"])
 
         result = self.run_validator("--generate")
 
@@ -155,17 +155,17 @@ class ValidatorIntegrationTests(unittest.TestCase):
 
     def test_RBC004_IntegrationNegative_member_version_bump_invalidates_the_team_identity(self) -> None:
         self.add_bot("Nova")
-        self.add_team("OrbitNova", ["Orbit 1.0.3", "Nova 1.0.3"])
+        self.add_team("OrbitNova", ["Orbit 1.0.0", "Nova 1.0.0"])
         self.assertEqual(0, self.run_validator("--generate").returncode)
         self.bump_version("Nova", "1.0.4")
 
         result = self.run_validator("--generate")
 
         self.assertNotEqual(0, result.returncode)
-        self.assertIn("unknown team member `Nova 1.0.3`", result.stderr)
+        self.assertIn("unknown team member `Nova 1.0.0`", result.stderr)
 
     def test_RBC004_IntegrationNegative_a_team_directory_may_not_carry_sources(self) -> None:
-        self.add_team("OrbitOrbit", ["Orbit 1.0.3", "Orbit 1.0.3"])
+        self.add_team("OrbitOrbit", ["Orbit 1.0.0", "Orbit 1.0.0"])
         (self.root / "bots" / "python" / "OrbitOrbit" / "payload.py").write_text("print()", encoding="utf-8")
 
         result = self.run_validator("--generate")
@@ -175,14 +175,14 @@ class ValidatorIntegrationTests(unittest.TestCase):
 
     def test_RBC004_IntegrationPositive_a_team_may_span_two_platforms(self) -> None:
         self.add_java_bot("Comet")
-        self.add_team("OrbitComet", ["Orbit 1.0.3", "Comet 1.0.2"])
+        self.add_team("OrbitComet", ["Orbit 1.0.0", "Comet 1.0.2"])
 
         result = self.run_validator("--generate")
 
         self.assertEqual(0, result.returncode, result.stderr)
         catalog = json.loads((self.root / "bots" / "index.json").read_text(encoding="utf-8"))
         entries = {entry["name"]: entry for entry in catalog["bots"] if entry["status"] == "active"}
-        self.assertEqual(["Orbit 1.0.3", "Comet 1.0.2"], entries["OrbitComet"]["teamMembers"])
+        self.assertEqual(["Orbit 1.0.0", "Comet 1.0.2"], entries["OrbitComet"]["teamMembers"])
         self.assertEqual("Mixed", entries["OrbitComet"]["platform"])
 
     def test_tree_hash_orders_files_by_posix_path_regardless_of_platform(self) -> None:

@@ -1,6 +1,6 @@
 {
   "name": "Orbit",
-  "version": "1.0.3",
+  "version": "1.0.0",
   "authors": ["Flemming N. Larsen"],
   "description": "Minimal source-run validation bot.",
   "platform": "Python",

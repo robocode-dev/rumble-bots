@@ -4,39 +4,11 @@
   "commit": "c043c771776170de8129d4ef2e36736d791b6115",
   "bots": [
     {
-      "name": "Orbit",
-      "version": "1.0.2",
-      "platform": "Python",
-      "path": "bots/python/Orbit",
-      "sourceHash": "sha256:86b63e60f231c8f736ec7dc7867c93966a59a63bb3409326516879236555cf36",
-      "owner": "flemming-n-larsen",
-      "authors": [
-        "Tank Royale Rumble maintainers"
-      ],
-      "addedAt": "2026-08-02",
-      "status": "superseded",
-      "teamMembers": []
-    },
-    {
-      "name": "Vector",
-      "version": "1.0.0",
-      "platform": "Python",
-      "path": "bots/python/Vector",
-      "sourceHash": "sha256:2704786593814706f62968f21432411ecf7da2569dcd4eb3310a956c9f259429",
-      "owner": "flemming-n-larsen",
-      "authors": [
-        "Tank Royale Rumble maintainers"
-      ],
-      "addedAt": "2026-08-30",
-      "status": "superseded",
-      "teamMembers": []
-    },
-    {
       "name": "Corners",
       "version": "1.0.0",
       "platform": "JVM",
       "path": "bots/java/Corners",
-      "sourceHash": "sha256:404ca740fec5bb93fe5b19fd9dcc6b138a9c5aa8d876513159258ae72aeb91ec",
+      "sourceHash": "sha256:36968e64ee7480a57a53bcf6a9ee4d988fa817e5e105707fe1bec7f95a3f6386",
       "owner": "flemming-n-larsen",
       "authors": [
         "Mathew Nelson",
@@ -51,7 +23,7 @@
       "version": "1.0.0",
       "platform": "JVM",
       "path": "bots/java/Crazy",
-      "sourceHash": "sha256:bc813c792d71e227c5993fb26acfff036da5f46d56d0381ca443a8706041a156",
+      "sourceHash": "sha256:55870953c538098dd18a26f09c1d71da8dd939c41b06346e62744ed507cf26c2",
       "owner": "flemming-n-larsen",
       "authors": [
         "Mathew Nelson",
@@ -63,10 +35,10 @@
     },
     {
       "name": "Orbit",
-      "version": "1.0.3",
+      "version": "1.0.0",
       "platform": "Python",
       "path": "bots/python/Orbit",
-      "sourceHash": "sha256:8b68aac7974a794a06596cf167d2342f4bdf8501094fe29a514696cd1037f8f8",
+      "sourceHash": "sha256:dba6d8d7c1c134b7e40eef5152c12b361932d411cd0438c7e2c3891da474f691",
       "owner": "flemming-n-larsen",
       "authors": [
         "Flemming N. Larsen"
@@ -80,7 +52,7 @@
       "version": "1.0.0",
       "platform": "JVM",
       "path": "bots/java/SpinBot",
-      "sourceHash": "sha256:5a346701b5d65c11d5e691ea9d272da33bce5eca8c67d252c0db710faba9a695",
+      "sourceHash": "sha256:85a01374fc4e76846bfcb6d17ea017ce2c386337f107068878a420a1c71de6c4",
       "owner": "flemming-n-larsen",
       "authors": [
         "Mathew Nelson",
@@ -92,10 +64,10 @@
     },
     {
       "name": "Vector",
-      "version": "1.1.1",
+      "version": "1.0.0",
       "platform": "Python",
       "path": "bots/python/Vector",
-      "sourceHash": "sha256:dc72d552863a57faf11ce9fee2ee6f03893fba56045fecef565de1467a10df08",
+      "sourceHash": "sha256:b446df5e8541fa7928f9f104167e97dc51fed2419d138ca64df9e8af7bea72b7",
       "owner": "flemming-n-larsen",
       "authors": [
         "Flemming N. Larsen"
