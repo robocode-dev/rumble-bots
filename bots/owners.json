@@ -10,12 +10,17 @@
         "Corners",
         "CornersCrazy",
         "Crazy",
+        "Fire",
         "Orbit",
         "OrbitVector",
+        "RamFire",
         "SpinBot",
-        "Vector"
+        "Target",
+        "TrackFire",
+        "Vector",
+        "Walls"
       ],
-      "activeSlots": 7
+      "activeSlots": 12
     }
   ]
 }

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T21:19:28Z",
-  "commit": "1ff341b59f0b73db858f153dff17f002a0256413",
+  "generatedAt": "2026-09-15T14:10:17Z",
+  "commit": "local",
   "bots": [
     {
       "name": "Corners",
@@ -51,6 +51,21 @@
       "teamMembers": []
     },
     {
+      "name": "Fire",
+      "version": "1.0.0",
+      "platform": "JVM",
+      "path": "bots/java/Fire",
+      "sourceHash": "sha256:cc989cdd80b9579e4747dbd384bd151fb01f0d35ae5f0d8749d8856aa5e8ac23",
+      "owner": "flemming-n-larsen",
+      "authors": [
+        "Mathew Nelson",
+        "Flemming N. Larsen"
+      ],
+      "addedAt": "2026-09-15",
+      "status": "active",
+      "teamMembers": []
+    },
+    {
       "name": "Orbit",
       "version": "1.0.0",
       "platform": "Python",
@@ -82,6 +97,21 @@
       ]
     },
     {
+      "name": "RamFire",
+      "version": "1.0.0",
+      "platform": "JVM",
+      "path": "bots/java/RamFire",
+      "sourceHash": "sha256:960b6c9ce918ed3c182dd886ce5722cb4af975af05610a767d768d5c87b2460a",
+      "owner": "flemming-n-larsen",
+      "authors": [
+        "Mathew Nelson",
+        "Flemming N. Larsen"
+      ],
+      "addedAt": "2026-09-15",
+      "status": "active",
+      "teamMembers": []
+    },
+    {
       "name": "SpinBot",
       "version": "1.0.0",
       "platform": "JVM",
@@ -97,6 +127,36 @@
       "teamMembers": []
     },
     {
+      "name": "Target",
+      "version": "1.0.0",
+      "platform": "JVM",
+      "path": "bots/java/Target",
+      "sourceHash": "sha256:200e9b0d5fd07c7655c54acb5a222d3a5117f27ccef6aa50cd26ac259bcbbaaa",
+      "owner": "flemming-n-larsen",
+      "authors": [
+        "Mathew Nelson",
+        "Flemming N. Larsen"
+      ],
+      "addedAt": "2026-09-15",
+      "status": "active",
+      "teamMembers": []
+    },
+    {
+      "name": "TrackFire",
+      "version": "1.0.0",
+      "platform": "JVM",
+      "path": "bots/java/TrackFire",
+      "sourceHash": "sha256:5a1ff23e2a41ddcab5313e2ffc0b94e8735e99f8b851efb6c608eb80c5e8139c",
+      "owner": "flemming-n-larsen",
+      "authors": [
+        "Mathew Nelson",
+        "Flemming N. Larsen"
+      ],
+      "addedAt": "2026-09-15",
+      "status": "active",
+      "teamMembers": []
+    },
+    {
       "name": "Vector",
       "version": "1.0.0",
       "platform": "Python",
@@ -107,6 +167,21 @@
         "Flemming N. Larsen"
       ],
       "addedAt": "2026-09-06",
+      "status": "active",
+      "teamMembers": []
+    },
+    {
+      "name": "Walls",
+      "version": "1.0.0",
+      "platform": "JVM",
+      "path": "bots/java/Walls",
+      "sourceHash": "sha256:b076809867c84a087be6062ebbe8d278be2d37a97617dee3199228fc1669397e",
+      "owner": "flemming-n-larsen",
+      "authors": [
+        "Mathew Nelson",
+        "Flemming N. Larsen"
+      ],
+      "addedAt": "2026-09-15",
       "status": "active",
       "teamMembers": []
     }

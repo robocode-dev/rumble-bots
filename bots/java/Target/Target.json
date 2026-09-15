@@ -1,0 +1,10 @@
+{
+  "name": "Target",
+  "version": "1.0.0",
+  "authors": ["Mathew Nelson", "Flemming N. Larsen"],
+  "description": "Sits still. Moves every time energy drops by 20. Demonstrates custom events.",
+  "platform": "JVM",
+  "programmingLang": "Java 17",
+  "gameTypes": ["1v1", "melee", "twinduel"],
+  "license": "Apache-2.0"
+}
