@@ -60,6 +60,8 @@ class ValidatorIntegrationTests(unittest.TestCase):
         (destination / f"{name}.java").write_text("// dev.robocode.tankroyale.botapi", encoding="utf-8")
         for suffix in (".sh", ".cmd"):
             (destination / f"{name}{suffix}").write_text("", encoding="utf-8")
+        script = destination / f"{name}.sh"
+        script.chmod(script.stat().st_mode | 0o111)  # the validator requires the executable bit on POSIX
 
     def add_team(self, name: str, members: list[str]) -> None:
         destination = self.root / "bots" / "python" / name
