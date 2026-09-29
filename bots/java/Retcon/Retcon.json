@@ -1,0 +1,12 @@
+{
+  "name": "Retcon",
+  "version": "0.2.0",
+  "authors": ["Flemming N. Larsen"],
+  "description": "Research bot for Retroactive Hit Analysis. Milestone 2: wave surfing, orbiting, and a virtual gun choosing linear or head-on aim.",
+  "homepage": "",
+  "countryCodes": ["dk"],
+  "platform": "JVM",
+  "programmingLang": "Java 25",
+  "gameTypes": ["1v1", "melee", "twinduel"],
+  "license": "MIT"
+}

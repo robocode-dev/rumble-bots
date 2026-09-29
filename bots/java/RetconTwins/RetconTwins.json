@@ -1,0 +1,8 @@
+{
+  "name": "RetconTwins",
+  "version": "0.2.0",
+  "authors": ["Flemming N. Larsen"],
+  "description": "Two Retcons as a 2v2 team.",
+  "license": "MIT",
+  "teamMembers": ["Retcon 0.2.0", "Retcon 0.2.0"]
+}
