@@ -14,13 +14,15 @@
         "Orbit",
         "OrbitVector",
         "RamFire",
+        "Retcon",
+        "RetconTwins",
         "SpinBot",
         "Target",
         "TrackFire",
         "Vector",
         "Walls"
       ],
-      "activeSlots": 12
+      "activeSlots": 14
     }
   ]
 }

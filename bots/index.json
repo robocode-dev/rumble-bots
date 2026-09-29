@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-29T17:35:32Z",
-  "commit": "a856c23a9ba86ca04100efce2eeddc521ccc243f",
+  "generatedAt": "2026-09-29T18:11:19Z",
+  "commit": "aeb34602096ed93ed7252b8d7adb01a54148a0d8",
   "bots": [
     {
       "name": "Corners",
@@ -110,6 +110,37 @@
       "addedAt": "2026-09-15",
       "status": "active",
       "teamMembers": []
+    },
+    {
+      "name": "Retcon",
+      "version": "0.2.0",
+      "platform": "JVM",
+      "path": "bots/java/Retcon",
+      "sourceHash": "sha256:5f7dfaaedefc39bd93d86440a2996342583d57b75b861942dc1e1899b7164bb2",
+      "owner": "flemming-n-larsen",
+      "authors": [
+        "Flemming N. Larsen"
+      ],
+      "addedAt": "2026-09-29",
+      "status": "active",
+      "teamMembers": []
+    },
+    {
+      "name": "RetconTwins",
+      "version": "0.2.0",
+      "platform": "JVM",
+      "path": "bots/java/RetconTwins",
+      "sourceHash": "sha256:add8e7a7e6575dca127cfb573f8f281373f016a3036fc29b08ac91f58a6ad998",
+      "owner": "flemming-n-larsen",
+      "authors": [
+        "Flemming N. Larsen"
+      ],
+      "addedAt": "2026-09-29",
+      "status": "active",
+      "teamMembers": [
+        "Retcon 0.2.0",
+        "Retcon 0.2.0"
+      ]
     },
     {
       "name": "SpinBot",
