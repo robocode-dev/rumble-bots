@@ -11,6 +11,7 @@ import re
 import subprocess
 import sys
 import unicodedata
+from urllib.parse import unquote
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -21,10 +22,14 @@ PLATFORMS = {
     "csharp": (".cs", "C#", "Robocode.TankRoyale.BotApi"),
     "java": (".java", "JVM", "dev.robocode.tankroyale.botapi"),
     "python": (".py", "Python", "robocode_tank_royale"),
-    "typescript": (".ts", "TypeScript", "@robocode/tank-royale"),
+    "typescript": (".ts", "TypeScript", "@robocode.dev/tank-royale-bot-api"),
 }
 FORBIDDEN_SUFFIXES = {".dll", ".exe", ".jar", ".so", ".dylib", ".pyc", ".class", ".zip", ".tar", ".gz"}
 FORBIDDEN_TOKENS = ("processbuilder", "runtime.exec", "subprocess", "os.system", "child_process", "system.diagnostics.process", "socket", "ctypes", "dllimport", "eval(")
+TYPESCRIPT_API = "@robocode.dev/tank-royale-bot-api"
+# The official API's NodeRuntimeAdapter requires its declared `ws` runtime peer.
+# Review this boundary against the published API manifest when its dependency set changes.
+TYPESCRIPT_RUNTIME_PEERS = {"ws"}
 LEET = str.maketrans({"0": "o", "1": "l", "3": "e", "4": "a", "5": "s", "7": "t", "8": "b", "9": "g", "@": "a", "$": "s", "!": "i", "|": "l"})
 
 
@@ -123,6 +128,8 @@ def validate_bot(platform_key: str, directory: Path, *, smoke: bool) -> Bot:
         raise ValidationError(f"{directory}: missing required `platform` in {directory.name}.json")
     if config["platform"] != expected_platform:
         raise ValidationError(f"{directory}: `{platform_key}` entries require platform `{expected_platform}`")
+    if platform_key == "typescript":
+        validate_typescript_dependencies(directory)
     for suffix in (".sh", ".cmd"):
         script = directory / f"{directory.name}{suffix}"
         if not script.is_file():
@@ -138,6 +145,8 @@ def validate_bot(platform_key: str, directory: Path, *, smoke: bool) -> Bot:
     if api_token.lower() not in source_text:
         raise ValidationError(f"{directory}: source must reference the official Tank Royale {expected_platform} Bot API")
     for path in directory.rglob("*"):
+        if path.is_dir() and path.name in {"node_modules", ".venv", "bin", "obj"}:
+            raise ValidationError(f"{path}: generated dependency and build directories are not allowed")
         if not path.is_file():
             continue
         if "__pycache__" in path.parts:
@@ -151,6 +160,53 @@ def validate_bot(platform_key: str, directory: Path, *, smoke: bool) -> Bot:
     if smoke:
         smoke_bot(bot)
     return bot
+
+
+def validate_typescript_dependencies(directory: Path) -> None:
+    """Check reviewable npm declarations without installing or running package code."""
+    package = read_json(directory / "package.json")
+    allowed = {TYPESCRIPT_API} | TYPESCRIPT_RUNTIME_PEERS
+    for section in ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies"):
+        dependencies = package.get(section, {})
+        if not isinstance(dependencies, dict):
+            raise ValidationError(f"{directory}: package.json `{section}` must be an object")
+        for name, version in dependencies.items():
+            if name not in allowed:
+                raise ValidationError(f"{directory}: unrelated TypeScript dependency `{name}` is not allowed")
+            if not isinstance(version, str) or any(token in version for token in (":", "/", "\\")):
+                raise ValidationError(f"{directory}: `{name}` must use a registry version, not a path, URL or package alias")
+    dependencies = package.get("dependencies", {})
+    if TYPESCRIPT_API not in dependencies:
+        raise ValidationError(f"{directory}: package.json dependencies must declare `{TYPESCRIPT_API}`")
+    lock = read_json(directory / "package-lock.json")
+    packages = lock.get("packages")
+    if not isinstance(packages, dict) or not isinstance(packages.get(""), dict):
+        raise ValidationError(f"{directory}: package-lock.json must contain npm package metadata")
+    for section in ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies"):
+        if packages[""].get(section, {}) != package.get(section, {}):
+            raise ValidationError(f"{directory}: package-lock.json {section} do not match package.json; regenerate the lockfile")
+    api = packages.get(f"node_modules/{TYPESCRIPT_API}", {})
+    peers = api.get("peerDependencies", {}) if isinstance(api, dict) else {}
+    if not isinstance(peers, dict):
+        raise ValidationError(f"{directory}: the official API's locked peerDependencies must be an object")
+    for peer in TYPESCRIPT_RUNTIME_PEERS:
+        if peer not in peers or peer not in dependencies or f"node_modules/{peer}" not in packages:
+            raise ValidationError(f"{directory}: the official TypeScript API requires its declared `{peer}` runtime peer in the manifest and lockfile")
+    for path in packages:
+        if not path:
+            continue
+        name = path.rsplit("node_modules/", 1)[-1]
+        if name not in allowed:
+            raise ValidationError(f"{directory}: unrelated locked TypeScript dependency `{name}` is not allowed")
+        entry = packages[path]
+        if not isinstance(entry, dict) or not isinstance(entry.get("resolved"), str):
+            raise ValidationError(f"{directory}: locked `{name}` is missing registry resolution metadata")
+        version = entry.get("version")
+        if not isinstance(version, str) or not re.fullmatch(r"\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?", version):
+            raise ValidationError(f"{directory}: locked `{name}` must identify a concrete registry version")
+        expected_url = f"https://registry.npmjs.org/{name}/-/{name.rsplit('/', 1)[-1]}-{version}.tgz"
+        if unquote(entry["resolved"]) != expected_url or not isinstance(entry.get("integrity"), str) or not entry["integrity"]:
+            raise ValidationError(f"{directory}: locked `{name}` must resolve to its official npm registry package with integrity metadata")
 
 
 def resolve_teams(bots: list[Bot]) -> list[Bot]:
