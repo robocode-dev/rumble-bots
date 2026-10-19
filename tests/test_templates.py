@@ -94,6 +94,13 @@ class TemplateSubmissionTests(unittest.TestCase):
         result = self.validate()
         self.assertEqual(0, result.returncode, result.stderr)
 
+    def test_RBC006_IntegrationNegative_missing_lockfile_is_rejected(self) -> None:
+        directory = copy_template(self.root, "typescript", "MyBot")
+        (directory / "package-lock.json").unlink()
+        result = self.validate()
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("package-lock.json", result.stderr)
+
     def test_RBC006_IntegrationNegative_an_unrelated_library_is_rejected_even_if_claimed_as_a_peer(self) -> None:
         directory = copy_template(self.root, "typescript", "MyBot")
         package = json.loads((directory / "package.json").read_text())
