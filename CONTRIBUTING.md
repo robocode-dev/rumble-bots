@@ -1,11 +1,13 @@
 # Contributing a ranked bot
 
-Submit source code only. Bots must use an official Tank Royale Bot API for Java, C#, Python, or TypeScript and run through the checked-in booter-convention scripts. Do not submit binary artifacts, generated dependency folders, custom protocol clients, process launchers, raw sockets, or code that writes outside its temporary directory.
+Submit source code only. Bots must use an official Tank Royale Bot API for Java, C#, Python, or TypeScript and run through the checked-in booter-convention scripts. Dependencies are limited to the official API, its declared runtime dependencies and the platform's standard library. TypeScript bots explicitly declare the API's required `ws` runtime peer and commit their `package-lock.json`; unrelated bot libraries remain disallowed. Do not submit binary artifacts, generated dependency folders, custom protocol clients, process launchers, raw sockets, or code that writes outside its temporary directory.
 
 Each bot directory's `license` field is its license grant for the complete directory. By opening a pull request, you certify that you have the right to publish the submitted code under that SPDX license, in the spirit of the Developer Certificate of Origin. Include a full license file if it helps users, but it is optional.
 
 The first merged pull request for a bot name reserves that name for its submitting forge account. Only that account, or an account later registered in `bots/owners.json` by an already registered account, may submit later versions. A source change requires a version bump; only the latest version remains active. Each owner has five active entries by default, including a TwinDuel team.
 
 Use `python scripts/validate_bot.py --root . --owner <your-forge-account> --smoke` before opening a pull request. CI is authoritative. A green check does not replace moderator review, especially for a first submission.
+
+Start from the [runnable templates and copy-and-rename instructions](templates/README.md). They include pinned dependencies, both launchers and the required `RUMBLE_SMOKE_READY <BotName>` branch. The validator requires Python 3.11+ and `sh`; Windows users can install Git for Windows and make its shell available. It sets `RUMBLE_SMOKE=1`, invokes each individual bot's `.sh` launcher and requires a successful exit with the marker within 20 seconds. This verifies startup rather than a server handshake. Commit each `.sh` with executable mode `100755`, using `git update-index --chmod=+x` after staging it. Team entries contain JSON only and skip individual-bot launcher checks.
 
 Copyright complaints, unsafe code, impersonation, and disputes are handled under [GOVERNANCE.md](GOVERNANCE.md). Do not include secrets in source, bot configuration, issues, or pull-request text.

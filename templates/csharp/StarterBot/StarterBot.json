@@ -1,0 +1,10 @@
+{
+  "name": "StarterBot",
+  "version": "1.0.0",
+  "authors": ["Your name"],
+  "description": "Turns its gun and fires at scanned opponents.",
+  "platform": "C#",
+  "programmingLang": "C# / .NET 10",
+  "gameTypes": ["1v1", "melee", "twinduel"],
+  "license": "Apache-2.0"
+}

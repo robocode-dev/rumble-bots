@@ -4,12 +4,12 @@
 
 ## Submit a bot
 
-1. Copy [the bot template](.github/PULL_REQUEST_TEMPLATE/bot-submission.md) into `bots/<platform>/<BotName>/`.
+1. Choose a [runnable bot template](templates/README.md) and follow its copy-and-rename instructions into `bots/<platform>/<BotName>/`.
 2. Include `<BotName>.json`, `<BotName>.sh`, `<BotName>.cmd`, and source code that uses an official Tank Royale Bot API.
 3. Declare one permitted SPDX license: `MIT`, `Apache-2.0`, `BSD-3-Clause`, or `GPL-3.0-or-later`.
 4. Run `python scripts/validate_bot.py --root . --owner <your-forge-account> --smoke` before opening a pull request.
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) for the full submission, ownership, licensing, and moderation rules. The current validator proves the source-run entry point starts; connecting the smoke check to a temporary Tank Royale server is the next hardening increment before public ranked submissions open.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) for the full submission, ownership, licensing, and moderation rules. The [template guide](templates/README.md#smoke-check-and-executable-scripts) explains smoke markers, runtime prerequisites and executable bits. JSON-only TwinDuel teams use the [team template](templates/README.md#json-only-twinduel-team). The validator's smoke check starts the source entry point; it does not establish a server connection or completed battle. Connecting the smoke check to a temporary Tank Royale server is the next hardening increment before public ranked submissions open.
 
 ## Catalog
 
