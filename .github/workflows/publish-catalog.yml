@@ -37,8 +37,18 @@ jobs:
             [[ "$GITHUB_REF" == "refs/heads/main" ]] || { echo "Dispatch this publisher from main." >&2; exit 1; }
             pr_number="$INPUT_PR_NUMBER"
           else
-            prs="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls")"
-            pr_number="$(jq -r '[.[] | select(.merged_at != null and .base.ref == "main")] | if length == 1 then .[0].number else empty end' <<< "$prs")"
+            pr_number=""
+            for attempt in {1..12}; do
+              prs="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls")"
+              pr_number="$(jq -r '[.[] | select(.merged_at != null and .base.ref == "main")] | if length == 1 then .[0].number else empty end' <<< "$prs")"
+              if [[ "$pr_number" =~ ^[0-9]+$ ]]; then
+                break
+              fi
+              echo "GitHub has not associated this main commit with its merged pull request yet (attempt $attempt/12)." >&2
+              if [[ "$attempt" -lt 12 ]]; then
+                sleep 5
+              fi
+            done
           fi
           [[ "$pr_number" =~ ^[0-9]+$ ]] || { echo "Could not identify exactly one merged bot submission pull request." >&2; exit 1; }
           pr="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${pr_number}")"
