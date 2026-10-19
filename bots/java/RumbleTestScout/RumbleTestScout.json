@@ -1,6 +1,6 @@
 {
   "name": "RumbleTestScout",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "authors": ["robocode-rumble-test"],
   "description": "Turns its gun and fires at scanned opponents.",
   "platform": "JVM",
