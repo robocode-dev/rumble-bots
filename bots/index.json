@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-29T18:11:19Z",
-  "commit": "aeb34602096ed93ed7252b8d7adb01a54148a0d8",
+  "generatedAt": "2026-10-19T19:22:46Z",
+  "commit": "90d44e20b32d492c11485aab9f338db756c475dd",
   "bots": [
     {
       "name": "Corners",
@@ -141,6 +141,20 @@
         "Retcon 0.2.0",
         "Retcon 0.2.0"
       ]
+    },
+    {
+      "name": "RumbleTestScout",
+      "version": "1.0.0",
+      "platform": "JVM",
+      "path": "bots/java/RumbleTestScout",
+      "sourceHash": "sha256:c3e7eb79bd118346801b1a62fadd114b3c30dc470a17e78b5260779d59d3ce53",
+      "owner": "robocode-rumble-test",
+      "authors": [
+        "robocode-rumble-test"
+      ],
+      "addedAt": "2026-10-19",
+      "status": "active",
+      "teamMembers": []
     },
     {
       "name": "SpinBot",

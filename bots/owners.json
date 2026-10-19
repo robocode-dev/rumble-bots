@@ -23,6 +23,16 @@
         "Walls"
       ],
       "activeSlots": 14
+    },
+    {
+      "ownerId": "robocode-rumble-test",
+      "accounts": [
+        "robocode-rumble-test"
+      ],
+      "bots": [
+        "RumbleTestScout"
+      ],
+      "activeSlots": 1
     }
   ]
 }
