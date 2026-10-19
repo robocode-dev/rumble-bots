@@ -8,6 +8,7 @@ on:
       - templates/**
       - tests/**
       - .github/workflows/validate.yml
+      - .github/workflows/publish-catalog.yml
 
 permissions:
   contents: read
