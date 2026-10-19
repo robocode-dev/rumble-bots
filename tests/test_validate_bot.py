@@ -12,6 +12,7 @@ from pathlib import Path
 
 REPOSITORY = Path(__file__).parents[1]
 VALIDATOR = REPOSITORY / "scripts" / "validate_bot.py"
+TEST_OWNER = "flemming-n-larsen"
 sys.path.insert(0, str(REPOSITORY / "scripts"))
 from validate_bot import tree_hash  # noqa: E402
 
@@ -22,10 +23,35 @@ class ValidatorIntegrationTests(unittest.TestCase):
         self.root = Path(self.temporary_directory.name)
         shutil.copytree(REPOSITORY / "bots", self.root / "bots")
 
+        # Submission tests run as the repository's default test owner. Exclude other owners'
+        # live bots from the fixture so a contributor's version update is not mistaken for
+        # an unrelated source change by the fixture owner.
+        bots_root = self.root / "bots"
+        owners_path = bots_root / "owners.json"
+        owners = json.loads(owners_path.read_text(encoding="utf-8"))
+        owner_record = next(owner for owner in owners["owners"] if TEST_OWNER in owner["accounts"])
+        catalog_path = bots_root / "index.json"
+        catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+        owned_entries = [entry for entry in catalog["bots"] if entry["owner"] == TEST_OWNER]
+        owned_paths = {entry["path"] for entry in owned_entries}
+
+        for platform_directory in bots_root.iterdir():
+            if not platform_directory.is_dir():
+                continue
+            for bot_directory in platform_directory.iterdir():
+                relative_path = bot_directory.relative_to(self.root).as_posix()
+                if bot_directory.is_dir() and relative_path not in owned_paths:
+                    shutil.rmtree(bot_directory)
+
+        catalog["bots"] = owned_entries
+        owners["owners"] = [owner_record]
+        catalog_path.write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
+        owners_path.write_text(json.dumps(owners, indent=2) + "\n", encoding="utf-8")
+
     def tearDown(self) -> None:
         self.temporary_directory.cleanup()
 
-    def run_validator(self, *arguments: str, owner: str = "flemming-n-larsen") -> subprocess.CompletedProcess[str]:
+    def run_validator(self, *arguments: str, owner: str = TEST_OWNER) -> subprocess.CompletedProcess[str]:
         return subprocess.run([sys.executable, str(VALIDATOR), "--root", str(self.root), "--owner", owner, *arguments], text=True, capture_output=True, check=False)
 
     def add_bot(self, name: str) -> None:
