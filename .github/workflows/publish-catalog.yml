@@ -1,11 +1,21 @@
 name: Publish bot catalog
 
 on:
-  pull_request:
-    types: [closed]
+  push:
+    branches: [main]
+    paths:
+      - 'bots/**'
+  workflow_dispatch:
+    inputs:
+      pull_request_number:
+        description: Merged bot submission PR to republish
+        required: true
+        type: number
 
 permissions:
   contents: write
+  pull-requests: read
+  checks: read
 
 concurrency:
   group: publish-catalog
@@ -13,31 +23,55 @@ concurrency:
 
 jobs:
   publish:
-    if: github.event.pull_request.merged && github.event.pull_request.base.ref == 'main'
     runs-on: ubuntu-latest
     steps:
+      - name: Resolve and verify merged submission
+        id: submission
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_PR_NUMBER: ${{ inputs.pull_request_number }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            [[ "$GITHUB_REF" == "refs/heads/main" ]] || { echo "Dispatch this publisher from main." >&2; exit 1; }
+            pr_number="$INPUT_PR_NUMBER"
+          else
+            prs="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls")"
+            pr_number="$(jq -r '[.[] | select(.merged_at != null and .base.ref == "main")] | if length == 1 then .[0].number else empty end' <<< "$prs")"
+          fi
+          [[ "$pr_number" =~ ^[0-9]+$ ]] || { echo "Could not identify exactly one merged bot submission pull request." >&2; exit 1; }
+          pr="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${pr_number}")"
+          jq -e '.merged_at != null and .base.ref == "main"' <<< "$pr" >/dev/null || { echo "The selected pull request must be merged into main." >&2; exit 1; }
+          head_sha="$(jq -r '.head.sha' <<< "$pr")"
+          owner="$(jq -r '.user.login' <<< "$pr")"
+          [[ "$head_sha" =~ ^[0-9a-f]{40}$ && "$owner" =~ ^[A-Za-z0-9-]+$ ]] || { echo "Unexpected pull request identity." >&2; exit 1; }
+          successful_validation="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${head_sha}/check-runs" --jq '[.check_runs[] | select(.name == "validate" and .app.slug == "github-actions" and .conclusion == "success")] | length')"
+          [[ "$successful_validation" -gt 0 ]] || { echo "The merged pull request has no successful validate check for its head commit." >&2; exit 1; }
+          {
+            echo "pull_request_number=$pr_number"
+            echo "head_sha=$head_sha"
+            echo "owner=$owner"
+          } >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@v4
         with:
           ref: main
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      # Java bots run from source (Java 22+ multi-file launch); match the Rumble's JVM.
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '25'
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-      - run: python -m pip install -r templates/python/StarterBot/requirements.txt
-      - run: python scripts/validate_bot.py --root . --owner '${{ github.event.pull_request.user.login }}' --smoke --generate
-      - run: |
+      # The separate pull_request validation ran bot smoke without write access. This publisher
+      # runs only on trusted main and performs static catalog generation; it never launches bot code.
+      - name: Regenerate catalog without running bots
+        env:
+          BOT_OWNER: ${{ steps.submission.outputs.owner }}
+        run: python scripts/validate_bot.py --root . --owner "$BOT_OWNER" --generate
+      - name: Commit and publish generated catalog
+        run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add bots/index.json bots/owners.json
-          git diff --cached --quiet || git commit -m 'chore: regenerate bot catalog'
-          git push
+          if ! git diff --cached --quiet; then
+            git commit -m 'chore: regenerate bot catalog'
+            git push origin HEAD:main
+          fi
