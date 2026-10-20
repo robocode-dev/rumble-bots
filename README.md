@@ -2,6 +2,8 @@
 
 `rumble-bots` is the reviewable, source-only catalog of bots eligible for ranked Tank Royale Rumble battles. Authors submit bots through pull requests; clients consume the generated `bots/index.json` catalog and run exactly the source tree named by its SHA-256 hash.
 
+See the [bot author guide](https://robocode.dev/rumble/bot-author-guide) for the public submission journey, the [battle contributor guide](https://robocode.dev/rumble/client-guide) to run ranked battles, or the [live rankings](https://robocode-dev.github.io/rumble-data/).
+
 ## Submit a bot
 
 1. Choose a [runnable bot template](templates/README.md) and follow its copy-and-rename instructions into `bots/<platform>/<BotName>/`.
