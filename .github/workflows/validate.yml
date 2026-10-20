@@ -3,12 +3,14 @@ name: Validate bot submission
 on:
   pull_request:
     paths:
-      - bots/**
       - scripts/**
       - templates/**
       - tests/**
       - .github/workflows/validate.yml
       - .github/workflows/publish-catalog.yml
+      - .github/workflows/moderate.yml
+      - .github/workflows/manual-moderation.yml
+      - moderation/**
 
 permissions:
   contents: read
