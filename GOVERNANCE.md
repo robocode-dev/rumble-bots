@@ -24,6 +24,8 @@ Create the organization-owned GitHub App at **robocode-dev → Settings → Deve
 | Webhook | Inactive; this App receives no webhook events. |
 | Where can this GitHub App be installed? | Only on this account (`robocode-dev`). |
 
+Upload the [moderator App avatar](assets/tank-royale-rumble-moderator-avatar.png) under the App's display settings. This square, transparent PNG is the approved logo and is under GitHub's 1 MB upload limit.
+
 Set repository permissions **Contents**, **Pull requests**, **Commit statuses**, and **Issues** to **Read & write**. Leave other permissions at their defaults and subscribe to no webhook events. Create the App, then install it with **Only select repositories → `robocode-dev/rumble-bots`**. Do not grant it access to `tank-royale`, `rumble-data`, or all organization repositories.
 
 Generate one private key under the App's **Credentials → Key pairs** page. Store the App ID in the `rumble-bots` Actions secret `RUMBLE_MODERATOR_APP_ID` and the full PEM contents in `RUMBLE_MODERATOR_PRIVATE_KEY` at **rumble-bots → Settings → Secrets and variables → Actions → Repository secrets**. Never commit the PEM file. After the secrets are saved, check the installation and secret names, then delete the downloaded local PEM copy if it is no longer needed. Rotate the key through the same App settings and update the secret before revoking the old key.
