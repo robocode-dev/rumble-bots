@@ -8,6 +8,26 @@ Moderators resolve name-squatting, lost-account recovery, license complaints, an
 
 Once each quarter, a moderator performs a fork drill: fork the repository, enable Actions, run validation, and regenerate the catalog. Record the outcome in a GitHub issue. A fork can run the source validator without moderator credentials; automatic review and merge require the installed moderation App.
 
+## Moderator App registration
+
+Create the organization-owned GitHub App at **robocode-dev → Settings → Developer settings → GitHub Apps → New GitHub App**. Record the following registration values so a replacement moderator can reproduce the setup:
+
+| Field | Value |
+| --- | --- |
+| GitHub App name | `Tank Royale Rumble Moderator` |
+| Description (displayed to users) | `Reviews Rumble bot submissions, runs a test battle, and automatically merges submissions that pass. Escalates uncertain cases to the human moderator.` |
+| Homepage URL | `https://github.com/robocode-dev/rumble-bots` |
+| Redirect URI / Callback URL | Leave empty; the workflow uses installation tokens, not user OAuth. |
+| Request user authorization during installation | Off. |
+| Enable Device Flow | Off. |
+| Setup URL | Leave empty. |
+| Webhook | Inactive; this App receives no webhook events. |
+| Where can this GitHub App be installed? | Only on this account (`robocode-dev`). |
+
+Set repository permissions **Contents**, **Pull requests**, **Commit statuses**, and **Issues** to **Read & write**. Leave other permissions at their defaults and subscribe to no webhook events. Create the App, then install it with **Only select repositories → `robocode-dev/rumble-bots`**. Do not grant it access to `tank-royale`, `rumble-data`, or all organization repositories.
+
+Generate one private key under the App's **Credentials → Key pairs** page. Store the App ID in the `rumble-bots` Actions secret `RUMBLE_MODERATOR_APP_ID` and the full PEM contents in `RUMBLE_MODERATOR_PRIVATE_KEY` at **rumble-bots → Settings → Secrets and variables → Actions → Repository secrets**. Never commit the PEM file. After the secrets are saved, check the installation and secret names, then delete the downloaded local PEM copy if it is no longer needed. Rotate the key through the same App settings and update the secret before revoking the old key.
+
 ## GitHub Actions permissions
 
 The `pull_request_target` moderation workflow runs trusted code from `main` for every pull request. Its assessment job has a read-only token and no secrets. It fetches the exact PR commit as data, checks eligibility and source, then runs one real Battle Runner round in a pinned, non-root container with a read-only bot mount, limited resources, no capabilities and no GitHub credentials. Its separate verdict job never checks out or executes PR content. The repository's Actions event policy must explicitly allow this trusted workflow's `pull_request_target` event. Restrict this policy to this workflow; never run untrusted source in the verdict job.
