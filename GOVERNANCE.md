@@ -28,6 +28,8 @@ Set repository permissions **Contents**, **Pull requests**, **Commit statuses**,
 
 Generate one private key under the App's **Credentials → Key pairs** page. Store the App ID in the `rumble-bots` Actions secret `RUMBLE_MODERATOR_APP_ID` and the full PEM contents in `RUMBLE_MODERATOR_PRIVATE_KEY` at **rumble-bots → Settings → Secrets and variables → Actions → Repository secrets**. Never commit the PEM file. After the secrets are saved, check the installation and secret names, then delete the downloaded local PEM copy if it is no longer needed. Rotate the key through the same App settings and update the secret before revoking the old key.
 
+The organization installation created on 2026-10-20 has App ID `5402066`, slug `tank-royale-rumble-moderator`, and installation ID `173538338`. GitHub reports selected-repository access and the four write permissions above. Both named repository secrets were set on 2026-10-20; their values are not recorded here. Check the selected repository and token flow with a live moderation run before enforcing the required status.
+
 ## GitHub Actions permissions
 
 The `pull_request_target` moderation workflow runs trusted code from `main` for every pull request. Its assessment job has a read-only token and no secrets. It fetches the exact PR commit as data, checks eligibility and source, then runs one real Battle Runner round in a pinned, non-root container with a read-only bot mount, limited resources, no capabilities and no GitHub credentials. Its separate verdict job never checks out or executes PR content. The repository's Actions event policy must explicitly allow this trusted workflow's `pull_request_target` event. Restrict this policy to this workflow; never run untrusted source in the verdict job.
