@@ -13,7 +13,7 @@ import sys
 import unicodedata
 from urllib.parse import unquote
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -289,7 +289,8 @@ def check_governance(bots: list[Bot], root: Path, owner: str) -> None:
         raise ValidationError(f"owner `{owner}` exceeds the five active bot slot limit")
 
 
-def generated_catalog(bots: list[Bot], root: Path, owner: str) -> tuple[dict[str, Any], dict[str, Any]]:
+def generated_catalog(bots: list[Bot], root: Path, owner: str, generated_at: datetime | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
+    generated_at = generated_at or datetime.now(UTC)
     existing_owners = read_json(root / "bots" / "owners.json") if (root / "bots" / "owners.json").exists() else {"schemaVersion": 1, "owners": []}
     existing_catalog = read_json(root / "bots" / "index.json") if (root / "bots" / "index.json").exists() else {"bots": []}
     owner_by_bot = {bot_name: record["ownerId"] for record in existing_owners.get("owners", []) for bot_name in record.get("bots", [])}
@@ -319,7 +320,7 @@ def generated_catalog(bots: list[Bot], root: Path, owner: str) -> tuple[dict[str
             for owner_id, owner_record in sorted(owners.items())
         ],
     }
-    today = datetime.now(UTC).date().isoformat()
+    today = generated_at.date().isoformat()
     current_by_name = {bot.name: bot for bot in bots}
     history = []
     for entry in existing_catalog.get("bots", []):
@@ -333,7 +334,7 @@ def generated_catalog(bots: list[Bot], root: Path, owner: str) -> tuple[dict[str
         previous = next((entry for entry in existing_catalog.get("bots", []) if entry.get("name") == bot.name and entry.get("version") == bot.config["version"]), None)
         team_members = list(bot.team_member_identities)
         active.append({"name": bot.name, "version": bot.config["version"], "platform": bot.platform, "path": bot.directory.relative_to(root).as_posix(), "sourceHash": bot.source_hash, "owner": owner_by_bot.get(bot.name, owner), "authors": bot.config["authors"], "addedAt": previous.get("addedAt", today) if previous else today, "status": "active", "teamMembers": team_members})
-    catalog = {"schemaVersion": 1, "generatedAt": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"), "commit": os.environ.get("GITHUB_SHA", "local"), "bots": history + active}
+    catalog = {"schemaVersion": 1, "generatedAt": generated_at.replace(microsecond=0).isoformat().replace("+00:00", "Z"), "commit": os.environ.get("GITHUB_SHA", "local"), "bots": history + active}
     return catalog, owner_data
 
 
@@ -343,13 +344,24 @@ def main() -> int:
     parser.add_argument("--owner", required=True)
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--generate", action="store_true")
+    parser.add_argument("--generated-at", help="UTC timestamp for reproducible catalog verification")
     arguments = parser.parse_args()
+    generated_at = None
+    if arguments.generated_at:
+        if not arguments.generate:
+            parser.error("--generated-at requires --generate")
+        try:
+            generated_at = datetime.fromisoformat(arguments.generated_at.replace("Z", "+00:00"))
+        except ValueError:
+            parser.error("--generated-at must be an ISO 8601 UTC timestamp")
+        if generated_at.tzinfo is None or generated_at.utcoffset() != timedelta(0):
+            parser.error("--generated-at must use UTC")
     root = arguments.root.resolve()
     try:
         bots = resolve_teams([validate_bot(platform, directory, smoke=arguments.smoke) for platform, directory in bot_directories(root)])
         check_governance(bots, root, arguments.owner)
         if arguments.generate:
-            catalog, owners = generated_catalog(bots, root, arguments.owner)
+            catalog, owners = generated_catalog(bots, root, arguments.owner, generated_at)
             (root / "bots" / "index.json").write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
             (root / "bots" / "owners.json").write_text(json.dumps(owners, indent=2) + "\n", encoding="utf-8")
     except ValidationError as error:
