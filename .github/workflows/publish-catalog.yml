@@ -15,7 +15,7 @@ on:
 permissions:
   contents: write
   pull-requests: read
-  checks: read
+  statuses: read
 
 concurrency:
   group: publish-catalog
@@ -56,8 +56,8 @@ jobs:
           head_sha="$(jq -r '.head.sha' <<< "$pr")"
           owner="$(jq -r '.user.login' <<< "$pr")"
           [[ "$head_sha" =~ ^[0-9a-f]{40}$ && "$owner" =~ ^[A-Za-z0-9-]+$ ]] || { echo "Unexpected pull request identity." >&2; exit 1; }
-          successful_validation="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${head_sha}/check-runs" --jq '[.check_runs[] | select(.name == "validate" and .app.slug == "github-actions" and .conclusion == "success")] | length')"
-          [[ "$successful_validation" -gt 0 ]] || { echo "The merged pull request has no successful validate check for its head commit." >&2; exit 1; }
+          moderation_state="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${head_sha}/status" --jq '[.statuses[] | select(.context == "bot-moderation")][0].state')"
+          [[ "$moderation_state" == "success" ]] || { echo "The merged pull request has no current successful bot-moderation status for its head commit." >&2; exit 1; }
           {
             echo "pull_request_number=$pr_number"
             echo "head_sha=$head_sha"
@@ -70,7 +70,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      # The separate pull_request validation ran bot smoke without write access. This publisher
+      # The separate moderation job ran the submitted bot without write access. This publisher
       # runs only on trusted main and performs static catalog generation; it never launches bot code.
       - name: Regenerate catalog without running bots
         env:

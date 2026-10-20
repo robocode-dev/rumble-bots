@@ -1,0 +1,31 @@
+name: Resolve escalated moderation
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  resolve:
+    if: ${{ github.event.issue.pull_request && github.event.comment.user.login == 'flemming-n-larsen' && startsWith(github.event.comment.body, '/moderation approve ') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349
+        id: app
+        with:
+          app-id: ${{ secrets.RUMBLE_MODERATOR_APP_ID }}
+          private-key: ${{ secrets.RUMBLE_MODERATOR_PRIVATE_KEY }}
+          owner: robocode-dev
+          repositories: rumble-bots
+      - name: Resolve only the current pending commit
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+        run: |
+          HEAD_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq .head.sha)"
+          python moderation/moderate.py --pr "$PR_NUMBER" --sha "$HEAD_SHA" --comment-id "$COMMENT_ID"

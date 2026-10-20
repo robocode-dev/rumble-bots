@@ -1,0 +1,75 @@
+name: Moderate bot submissions
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main]
+
+concurrency:
+  group: moderate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  assess:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      kind: ${{ steps.assess.outputs.kind }}
+      reason_b64: ${{ steps.assess.outputs.reason_b64 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Fetch and pin the untrusted PR as data
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          [[ "$PR_NUMBER" =~ ^[0-9]+$ && "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git fetch --no-tags origin "+refs/pull/${PR_NUMBER}/head:refs/remotes/origin/moderation-${PR_NUMBER}"
+          [[ "$(git rev-parse "refs/remotes/origin/moderation-${PR_NUMBER}")" == "$HEAD_SHA" ]]
+      - name: Pull pinned runtime image
+        run: docker pull ghcr.io/robocode-dev/rumble-client@sha256:32ab3259f0ce69f319174b54ba36f4d85949c1a30ea4e65a94010b9c931acf2d
+      - name: Assess source and run isolated battle
+        id: assess
+        env:
+          BASE_SHA: ${{ github.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_OWNER: ${{ github.event.pull_request.user.login }}
+        run: |
+          python moderation/assess.py --base "$BASE_SHA" --head "$HEAD_SHA" --owner "$PR_OWNER" --output "$RUNNER_TEMP/moderation.json"
+
+  verdict:
+    needs: assess
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349
+        id: app
+        with:
+          app-id: ${{ secrets.RUMBLE_MODERATOR_APP_ID }}
+          private-key: ${{ secrets.RUMBLE_MODERATOR_PRIVATE_KEY }}
+          owner: robocode-dev
+          repositories: rumble-bots
+      - name: Apply verdict to the exact PR head
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          VERDICT_KIND: ${{ needs.assess.outputs.kind }}
+          VERDICT_REASON_B64: ${{ needs.assess.outputs.reason_b64 }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python moderation/moderate.py --pr "$PR_NUMBER" --sha "$HEAD_SHA" --base-sha "$BASE_SHA" --kind "$VERDICT_KIND" --reason-b64 "$VERDICT_REASON_B64" --run-url "$RUN_URL"

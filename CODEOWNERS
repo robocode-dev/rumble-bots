@@ -1,1 +1,9 @@
-* @flemming-n-larsen
+# Human review is required for automation, policy, templates, and publisher inputs.
+/.github/ @flemming-n-larsen
+/moderation/ @flemming-n-larsen
+/scripts/ @flemming-n-larsen
+/templates/ @flemming-n-larsen
+/CODEOWNERS @flemming-n-larsen
+/GOVERNANCE.md @flemming-n-larsen
+/CONTRIBUTING.md @flemming-n-larsen
+/README.md @flemming-n-larsen
