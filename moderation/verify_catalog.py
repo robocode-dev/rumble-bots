@@ -81,7 +81,10 @@ def verify(number: int, source_number: int) -> tuple[str, str]:
     if (moderation is None or moderation["state"] != "success"
             or (moderation.get("creator") or {}).get("login") != APP_LOGIN):
         raise VerificationError("Source bot has no successful moderator App status")
-    git("merge-base", "--is-ancestor", source["merge_commit_sha"], base)
+    try:
+        git("diff", "--quiet", source["head"]["sha"], base, "--", source_directory)
+    except subprocess.CalledProcessError as error:
+        raise VerificationError("Merged source bot content differs from current main") from error
     subprocess.run(["git", "fetch", "--no-tags", "origin", f"+refs/pull/{number}/head:refs/remotes/origin/catalog-verify"], check=True)
     if git("rev-parse", "refs/remotes/origin/catalog-verify") != head:
         raise VerificationError("Catalog PR head changed during verification")

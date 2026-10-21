@@ -5,7 +5,7 @@ import unittest
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from subprocess import CompletedProcess
+from subprocess import CalledProcessError, CompletedProcess
 from unittest.mock import patch
 
 from moderation import assess, moderate, verify_catalog
@@ -219,10 +219,11 @@ class CatalogVerificationTest(unittest.TestCase):
                     "bots/owners.json": "{}\n"}
         regenerated = proposed.copy()
         source = {"merged_at": generated_at, "base": {"ref": "main"},
-                  "head": {"sha": "d" * 40}, "merge_commit_sha": "e" * 40,
+                  "head": {"sha": "d" * 40},
                   "user": {"login": "contributor"}}
         statuses = [{"context": moderate.CONTEXT, "state": "success",
                      "creator": {"login": verify_catalog.APP_LOGIN}}]
+        source_matches_main = [True]
 
         def fake_api(method, path, payload=None):
             if path == "pulls/12":
@@ -246,7 +247,9 @@ class CatalogVerificationTest(unittest.TestCase):
                 return "bots/index.json"
             if args[0] == "show":
                 return proposed[args[1].split(":", 1)[1]].strip()
-            if args[:2] == ("merge-base", "--is-ancestor"):
+            if args[:2] == ("diff", "--quiet"):
+                if not source_matches_main[0]:
+                    raise CalledProcessError(1, ["git", *args])
                 return ""
             raise AssertionError(args)
 
@@ -261,6 +264,10 @@ class CatalogVerificationTest(unittest.TestCase):
             with self.assertRaisesRegex(verify_catalog.VerificationError, "Generated content differs"):
                 verify_catalog.verify(12, 7)
             regenerated["bots/owners.json"] = proposed["bots/owners.json"]
+            source_matches_main[0] = False
+            with self.assertRaisesRegex(verify_catalog.VerificationError, "source bot content differs"):
+                verify_catalog.verify(12, 7)
+            source_matches_main[0] = True
             statuses[0]["creator"] = {"login": "untrusted"}
             with self.assertRaisesRegex(verify_catalog.VerificationError, "no successful moderator App status"):
                 verify_catalog.verify(12, 7)
