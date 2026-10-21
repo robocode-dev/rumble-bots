@@ -173,7 +173,7 @@ class CatalogVerificationTest(unittest.TestCase):
     def setUp(self):
         self.pr = {"state": "open", "draft": False, "base": {"ref": "main", "sha": "c" * 40},
                    "head": {"sha": SHA, "ref": "catalog/pr-7-123-1", "repo": {"full_name": "robocode-dev/rumble-bots"}},
-                   "user": {"login": "github-actions[bot]"}}
+                   "user": {"login": verify_catalog.PUBLISHER_LOGIN}}
 
     def test_other_author_cannot_claim_generated_catalog(self):
         self.pr["user"]["login"] = "untrusted"
