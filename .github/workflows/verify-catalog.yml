@@ -1,0 +1,66 @@
+name: Verify generated bot catalog
+
+on:
+  repository_dispatch:
+    types: [catalog_publication]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: read
+    outputs:
+      kind: ${{ steps.verify.outputs.kind }}
+      reason_b64: ${{ steps.verify.outputs.reason_b64 }}
+      sha: ${{ steps.verify.outputs.sha }}
+      base_sha: ${{ steps.verify.outputs.base_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Regenerate and compare catalog on trusted main
+        id: verify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CATALOG_PR: ${{ github.event.client_payload.pull_request_number }}
+          SOURCE_PR: ${{ github.event.client_payload.source_pull_request_number }}
+        run: |
+          set -euo pipefail
+          [[ "$CATALOG_PR" =~ ^[0-9]+$ && "$SOURCE_PR" =~ ^[0-9]+$ ]]
+          python -m moderation.verify_catalog --pr "$CATALOG_PR" --source-pr "$SOURCE_PR" --output "$RUNNER_TEMP/catalog-verdict.json"
+          jq -r 'to_entries[] | "\(.key)=\(.value)"' "$RUNNER_TEMP/catalog-verdict.json" >> "$GITHUB_OUTPUT"
+
+  verdict:
+    needs: verify
+    if: ${{ always() && needs.verify.outputs.sha != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349
+        id: app
+        with:
+          app-id: ${{ secrets.RUMBLE_MODERATOR_APP_ID }}
+          private-key: ${{ secrets.RUMBLE_MODERATOR_PRIVATE_KEY }}
+          owner: robocode-dev
+          repositories: rumble-bots
+      - name: Apply exact-commit catalog verdict
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          CATALOG_PR: ${{ github.event.client_payload.pull_request_number }}
+          HEAD_SHA: ${{ needs.verify.outputs.sha }}
+          BASE_SHA: ${{ needs.verify.outputs.base_sha }}
+          VERDICT_KIND: ${{ needs.verify.outputs.kind }}
+          VERDICT_REASON_B64: ${{ needs.verify.outputs.reason_b64 }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python moderation/moderate.py --pr "$CATALOG_PR" --sha "$HEAD_SHA" --base-sha "$BASE_SHA" --kind "$VERDICT_KIND" --reason-b64 "$VERDICT_REASON_B64" --run-url "$RUN_URL"

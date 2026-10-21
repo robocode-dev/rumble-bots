@@ -108,6 +108,19 @@ class ValidatorIntegrationTests(unittest.TestCase):
         orbit = next(entry for entry in catalog["bots"] if entry["name"] == "Orbit" and entry["status"] == "active")
         self.assertEqual("active", orbit["status"])
 
+    def test_catalog_can_be_reproduced_at_its_recorded_utc_timestamp(self) -> None:
+        timestamp = "2026-10-21T00:00:00Z"
+        self.assertEqual(0, self.run_validator("--generate", "--generated-at", timestamp).returncode)
+        first = (self.root / "bots" / "index.json").read_bytes()
+        self.assertEqual(0, self.run_validator("--generate", "--generated-at", timestamp).returncode)
+        self.assertEqual(first, (self.root / "bots" / "index.json").read_bytes())
+        self.assertEqual(timestamp, json.loads(first)["generatedAt"])
+
+    def test_catalog_timestamp_must_be_utc(self) -> None:
+        result = self.run_validator("--generate", "--generated-at", "2026-10-21T02:00:00+02:00")
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("must use UTC", result.stderr)
+
     def test_invalid_license_is_rejected(self) -> None:
         config_path = self.root / "bots" / "python" / "Orbit" / "Orbit.json"
         config = json.loads(config_path.read_text(encoding="utf-8"))

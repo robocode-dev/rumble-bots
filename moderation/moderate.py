@@ -67,7 +67,7 @@ def automated(number: int, sha: str, kind: str, reason: str, run_url: str, base_
         comment(number, f"@{MODERATOR} The target branch changed while `{sha[:12]}` was being tested. Please review the current base and retry or resolve with `/moderation approve <reason>`.")
         return
     reason = reason.strip()[:1200] or "Moderation did not produce a reason"
-    if pr["draft"] or kind not in {"clean", "reject", "escalate"}:
+    if pr["draft"] or kind not in {"clean", "catalog", "reject", "escalate"}:
         kind = "escalate"
         reason = "Draft PR or missing verdict: " + reason
     if kind == "escalate":
@@ -83,12 +83,12 @@ def automated(number: int, sha: str, kind: str, reason: str, run_url: str, base_
     # The trusted job reads the live head again immediately before every irreversible action.
     api("POST", f"pulls/{number}/reviews", {
         "event": "APPROVE", "commit_id": sha,
-        "body": f"Automated moderation passed for `{sha[:12]}`: {reason}",
+        "body": f"Automated {'catalog verification' if kind == 'catalog' else 'moderation'} passed for `{sha[:12]}`: {reason}",
     })
     if current_pr(number, sha, base_sha) is None:
         print("PR changed after approval; merge skipped")
         return
-    status(sha, "success", "Source and completed battle passed", run_url)
+    status(sha, "success", "Generated catalog verified" if kind == "catalog" else "Source and completed battle passed", run_url)
     if current_pr(number, sha, base_sha) is None:
         print("PR changed after status; merge skipped")
         return

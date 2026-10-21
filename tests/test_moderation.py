@@ -2,11 +2,13 @@
 
 import tempfile
 import unittest
+import json
+from datetime import UTC, datetime
 from pathlib import Path
 from subprocess import CompletedProcess
 from unittest.mock import patch
 
-from moderation import assess, moderate
+from moderation import assess, moderate, verify_catalog
 
 
 SHA = "a" * 40
@@ -75,6 +77,24 @@ class ExactCommitDecisionTest(unittest.TestCase):
         self.assertEqual(review["event"], "APPROVE")
         self.assertEqual(review["commit_id"], SHA)
         self.assertEqual(merge["sha"], SHA)
+
+    def test_verified_catalog_uses_catalog_status_and_exact_commit_review(self):
+        calls = []
+
+        def fake_api(method, path, payload=None):
+            calls.append((method, path, payload))
+            if path == "pulls/12/merge":
+                return {"merged": True}
+            return self.pr if path == "pulls/12" else {}
+
+        with patch.object(moderate, "api", side_effect=fake_api):
+            moderate.automated(12, SHA, "catalog", "generated files match", "")
+        self.assertTrue(any(path == f"statuses/{SHA}" and payload["description"] == "Generated catalog verified"
+                            for _, path, payload in calls))
+        self.assertTrue(any(path == "pulls/12/reviews" and payload["commit_id"] == SHA
+                            for _, path, payload in calls))
+        self.assertTrue(any(path == "pulls/12/merge" and payload["sha"] == SHA
+                            for _, path, payload in calls))
 
     def test_new_commit_cannot_receive_a_stale_verdict(self):
         self.pr["head"]["sha"] = "b" * 40
@@ -147,6 +167,98 @@ class ExactCommitDecisionTest(unittest.TestCase):
         with patch.object(moderate, "api", side_effect=fake_api):
             with self.assertRaises(moderate.GitHubError):
                 moderate.human_override(12, SHA, 42)
+
+
+class CatalogVerificationTest(unittest.TestCase):
+    def setUp(self):
+        self.pr = {"state": "open", "draft": False, "base": {"ref": "main", "sha": "c" * 40},
+                   "head": {"sha": SHA, "ref": "catalog/pr-7-123-1", "repo": {"full_name": "robocode-dev/rumble-bots"}},
+                   "user": {"login": "github-actions[bot]"}}
+
+    def test_other_author_cannot_claim_generated_catalog(self):
+        self.pr["user"]["login"] = "untrusted"
+        with patch.dict("os.environ", {"GITHUB_REPOSITORY": "robocode-dev/rumble-bots"}), patch.object(
+            verify_catalog, "api", return_value=self.pr
+        ) as api:
+            with self.assertRaisesRegex(verify_catalog.VerificationError, "publisher-created"):
+                verify_catalog.verify(12, 7)
+        self.assertEqual(api.call_count, 1)
+
+    def test_moved_main_cannot_validate_stale_catalog(self):
+        with patch.dict("os.environ", {"GITHUB_REPOSITORY": "robocode-dev/rumble-bots"}), patch.object(
+            verify_catalog, "api", return_value=self.pr
+        ), patch.object(verify_catalog, "git", return_value="d" * 40):
+            with self.assertRaisesRegex(verify_catalog.VerificationError, "Main moved"):
+                verify_catalog.verify(12, 7)
+
+    def test_multiple_unpublished_bots_need_ownership_review(self):
+        source = {"merged_at": "2026-10-21T00:00:00Z", "base": {"ref": "main"},
+                  "user": {"login": "contributor"}}
+
+        def fake_api(method, path, payload=None):
+            if path == "pulls/12":
+                return self.pr
+            if path == "pulls/7":
+                return source
+            if path.startswith("pulls/7/files"):
+                return [{"filename": "bots/python/Nova/Nova.json"}]
+            raise AssertionError(path)
+
+        with patch.dict("os.environ", {"GITHUB_REPOSITORY": "robocode-dev/rumble-bots"}), patch.object(
+            verify_catalog, "api", side_effect=fake_api
+        ), patch.object(verify_catalog, "git", return_value="c" * 40), patch.object(
+            verify_catalog, "unpublished_bot_paths", return_value={"bots/python/Nova", "bots/java/Other"}
+        ):
+            with self.assertRaisesRegex(verify_catalog.VerificationError, "Other unpublished bot changes"):
+                verify_catalog.verify(12, 7)
+
+    def test_catalog_must_match_trusted_regeneration(self):
+        base = "c" * 40
+        generated_at = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        proposed = {"bots/index.json": json.dumps({"generatedAt": generated_at}) + "\n",
+                    "bots/owners.json": "{}\n"}
+        regenerated = proposed.copy()
+        source = {"merged_at": generated_at, "base": {"ref": "main"},
+                  "head": {"sha": "d" * 40}, "merge_commit_sha": "e" * 40,
+                  "user": {"login": "contributor"}}
+
+        def fake_api(method, path, payload=None):
+            if path == "pulls/12":
+                return self.pr
+            if path == "pulls/7":
+                return source
+            if path.startswith("pulls/7/files"):
+                return [{"filename": "bots/python/Nova/Nova.json"}]
+            if path == f"commits/{'d' * 40}/status":
+                return {"statuses": [{"context": moderate.CONTEXT, "state": "success",
+                                      "creator": {"login": verify_catalog.APP_LOGIN}}]}
+            raise AssertionError(path)
+
+        def fake_git(*args):
+            if args == ("rev-parse", "HEAD"):
+                return base
+            if args == ("rev-parse", "refs/remotes/origin/catalog-verify"):
+                return SHA
+            if args == ("rev-parse", f"{SHA}^"):
+                return base
+            if args[:2] == ("diff", "--name-only"):
+                return "bots/index.json"
+            if args[0] == "show":
+                return proposed[args[1].split(":", 1)[1]].strip()
+            if args[:2] == ("merge-base", "--is-ancestor"):
+                return ""
+            raise AssertionError(args)
+
+        with patch.dict("os.environ", {"GITHUB_REPOSITORY": "robocode-dev/rumble-bots"}), patch.object(
+            verify_catalog, "api", side_effect=fake_api
+        ), patch.object(verify_catalog, "unpublished_bot_paths", return_value={"bots/python/Nova"}), patch.object(
+            verify_catalog, "git", side_effect=fake_git), patch.object(
+            verify_catalog.subprocess, "run", return_value=CompletedProcess([], 0, "", "")
+        ), patch.object(verify_catalog.Path, "read_text", autospec=True, side_effect=lambda path, encoding=None: regenerated[path.as_posix()]):
+            self.assertEqual((SHA, base), verify_catalog.verify(12, 7))
+            regenerated["bots/owners.json"] = '{"owner": "wrong"}\n'
+            with self.assertRaisesRegex(verify_catalog.VerificationError, "Generated content differs"):
+                verify_catalog.verify(12, 7)
 
 
 if __name__ == "__main__":
