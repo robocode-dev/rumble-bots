@@ -76,10 +76,10 @@ def verify(number: int, source_number: int) -> tuple[str, str]:
     pending_paths = unpublished_bot_paths(Path.cwd())
     if pending_paths != {source_directory}:
         raise VerificationError(f"Other unpublished bot changes need ownership review: {sorted(pending_paths)}")
-    status = api("GET", f"commits/{source['head']['sha']}/status")
-    moderation = next((item for item in status["statuses"] if item["context"] == CONTEXT), None)
+    statuses = api("GET", f"commits/{source['head']['sha']}/statuses?per_page=100")
+    moderation = next((item for item in statuses if item["context"] == CONTEXT), None)
     if (moderation is None or moderation["state"] != "success"
-            or moderation["creator"]["login"] != APP_LOGIN):
+            or (moderation.get("creator") or {}).get("login") != APP_LOGIN):
         raise VerificationError("Source bot has no successful moderator App status")
     git("merge-base", "--is-ancestor", source["merge_commit_sha"], base)
     subprocess.run(["git", "fetch", "--no-tags", "origin", f"+refs/pull/{number}/head:refs/remotes/origin/catalog-verify"], check=True)

@@ -344,8 +344,11 @@ def main() -> int:
     parser.add_argument("--owner", required=True)
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--generate", action="store_true")
+    parser.add_argument("--skip-governance", action="store_true", help="Validate all bots without attributing unpublished changes to the supplied owner")
     parser.add_argument("--generated-at", help="UTC timestamp for reproducible catalog verification")
     arguments = parser.parse_args()
+    if arguments.skip_governance and arguments.generate:
+        parser.error("--skip-governance cannot be used with --generate")
     generated_at = None
     if arguments.generated_at:
         if not arguments.generate:
@@ -359,7 +362,8 @@ def main() -> int:
     root = arguments.root.resolve()
     try:
         bots = resolve_teams([validate_bot(platform, directory, smoke=arguments.smoke) for platform, directory in bot_directories(root)])
-        check_governance(bots, root, arguments.owner)
+        if not arguments.skip_governance:
+            check_governance(bots, root, arguments.owner)
         if arguments.generate:
             catalog, owners = generated_catalog(bots, root, arguments.owner, generated_at)
             (root / "bots" / "index.json").write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")

@@ -160,6 +160,16 @@ class ValidatorIntegrationTests(unittest.TestCase):
         nova = next(entry for entry in catalog["bots"] if entry["name"] == "Nova")
         self.assertEqual("alice", nova["owner"])
 
+    def test_general_validation_does_not_claim_another_owners_unpublished_bot(self) -> None:
+        config_path = self.root / "bots" / "java" / "SpinBot" / "SpinBot.json"
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        config["version"] = "1.0.4"
+        config_path.write_text(json.dumps(config), encoding="utf-8")
+        self.assertIn("belongs to owner", self.run_validator(owner="alice").stderr)
+        result = self.run_validator("--skip-governance", owner="alice")
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("cannot be used with --generate", self.run_validator("--skip-governance", "--generate").stderr)
+
     def test_registered_secondary_account_can_update_and_is_preserved(self) -> None:
         owners_path = self.root / "bots" / "owners.json"
         owners = json.loads(owners_path.read_text(encoding="utf-8"))
