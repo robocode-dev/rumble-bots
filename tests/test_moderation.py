@@ -221,6 +221,8 @@ class CatalogVerificationTest(unittest.TestCase):
         source = {"merged_at": generated_at, "base": {"ref": "main"},
                   "head": {"sha": "d" * 40}, "merge_commit_sha": "e" * 40,
                   "user": {"login": "contributor"}}
+        statuses = [{"context": moderate.CONTEXT, "state": "success",
+                     "creator": {"login": verify_catalog.APP_LOGIN}}]
 
         def fake_api(method, path, payload=None):
             if path == "pulls/12":
@@ -229,9 +231,8 @@ class CatalogVerificationTest(unittest.TestCase):
                 return source
             if path.startswith("pulls/7/files"):
                 return [{"filename": "bots/python/Nova/Nova.json"}]
-            if path == f"commits/{'d' * 40}/status":
-                return {"statuses": [{"context": moderate.CONTEXT, "state": "success",
-                                      "creator": {"login": verify_catalog.APP_LOGIN}}]}
+            if path == f"commits/{'d' * 40}/statuses?per_page=100":
+                return statuses
             raise AssertionError(path)
 
         def fake_git(*args):
@@ -258,6 +259,13 @@ class CatalogVerificationTest(unittest.TestCase):
             self.assertEqual((SHA, base), verify_catalog.verify(12, 7))
             regenerated["bots/owners.json"] = '{"owner": "wrong"}\n'
             with self.assertRaisesRegex(verify_catalog.VerificationError, "Generated content differs"):
+                verify_catalog.verify(12, 7)
+            regenerated["bots/owners.json"] = proposed["bots/owners.json"]
+            statuses[0]["creator"] = {"login": "untrusted"}
+            with self.assertRaisesRegex(verify_catalog.VerificationError, "no successful moderator App status"):
+                verify_catalog.verify(12, 7)
+            statuses[0].pop("creator")
+            with self.assertRaisesRegex(verify_catalog.VerificationError, "no successful moderator App status"):
                 verify_catalog.verify(12, 7)
 
 
