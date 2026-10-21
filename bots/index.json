@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-19T19:39:23Z",
-  "commit": "4a290569f87378b697234d452bd49c2a7a2aeefa",
+  "generatedAt": "2026-10-21T19:08:53Z",
+  "commit": "89ebc9e78ef40b576dec0bff1cb6ff755183004d",
   "bots": [
     {
       "name": "RumbleTestScout",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "platform": "JVM",
       "path": "bots/java/RumbleTestScout",
-      "sourceHash": "sha256:c3e7eb79bd118346801b1a62fadd114b3c30dc470a17e78b5260779d59d3ce53",
+      "sourceHash": "sha256:a989ca0d1a0d00bf335f956ece11374fdbc23fa6335e7165e70940c45e7a355e",
       "owner": "robocode-rumble-test",
       "authors": [
         "robocode-rumble-test"
@@ -158,15 +158,15 @@
     },
     {
       "name": "RumbleTestScout",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "platform": "JVM",
       "path": "bots/java/RumbleTestScout",
-      "sourceHash": "sha256:a989ca0d1a0d00bf335f956ece11374fdbc23fa6335e7165e70940c45e7a355e",
+      "sourceHash": "sha256:b02fe3fd3cbe64756cb54ba3ea8995b4a248777a41c4fc3d445a436a210d0ec8",
       "owner": "robocode-rumble-test",
       "authors": [
         "robocode-rumble-test"
       ],
-      "addedAt": "2026-10-19",
+      "addedAt": "2026-10-21",
       "status": "active",
       "teamMembers": []
     },
