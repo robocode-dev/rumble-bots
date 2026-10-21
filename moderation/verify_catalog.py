@@ -18,6 +18,7 @@ from scripts.validate_bot import ValidationError, bot_directories, read_json, re
 
 CATALOG_FILES = {"bots/index.json", "bots/owners.json"}
 APP_LOGIN = "tank-royale-rumble-moderator[bot]"
+PUBLISHER_LOGIN = "tank-royale-rumble-publisher[bot]"
 
 
 class VerificationError(Exception):
@@ -60,7 +61,7 @@ def verify(number: int, source_number: int) -> tuple[str, str]:
     base = pr["base"]["sha"]
     if (pr["state"] != "open" or pr["draft"] or pr["base"]["ref"] != "main"
             or pr["head"]["repo"]["full_name"] != os.environ["GITHUB_REPOSITORY"]
-            or pr["user"]["login"] != "github-actions[bot]"
+            or pr["user"]["login"] != PUBLISHER_LOGIN
             or not re.fullmatch(rf"catalog/pr-{source_number}-[0-9]+-[0-9]+", pr["head"]["ref"])):
         raise VerificationError("Not a publisher-created catalog PR on main")
     if git("rev-parse", "HEAD") != base:
