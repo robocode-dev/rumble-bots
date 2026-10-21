@@ -13,7 +13,7 @@ public class RumbleTestScout extends Bot {
     @Override
     public void run() {
         while (isRunning()) {
-            turnGunRight(12);
+            turnGunRight(14);
         }
     }
 
