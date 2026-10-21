@@ -191,6 +191,27 @@ class CatalogVerificationTest(unittest.TestCase):
             with self.assertRaisesRegex(verify_catalog.VerificationError, "Main moved"):
                 verify_catalog.verify(12, 7)
 
+    def test_multiple_unpublished_bots_need_ownership_review(self):
+        source = {"merged_at": "2026-10-21T00:00:00Z", "base": {"ref": "main"},
+                  "user": {"login": "contributor"}}
+
+        def fake_api(method, path, payload=None):
+            if path == "pulls/12":
+                return self.pr
+            if path == "pulls/7":
+                return source
+            if path.startswith("pulls/7/files"):
+                return [{"filename": "bots/python/Nova/Nova.json"}]
+            raise AssertionError(path)
+
+        with patch.dict("os.environ", {"GITHUB_REPOSITORY": "robocode-dev/rumble-bots"}), patch.object(
+            verify_catalog, "api", side_effect=fake_api
+        ), patch.object(verify_catalog, "git", return_value="c" * 40), patch.object(
+            verify_catalog, "unpublished_bot_paths", return_value={"bots/python/Nova", "bots/java/Other"}
+        ):
+            with self.assertRaisesRegex(verify_catalog.VerificationError, "Other unpublished bot changes"):
+                verify_catalog.verify(12, 7)
+
     def test_catalog_must_match_trusted_regeneration(self):
         base = "c" * 40
         generated_at = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -229,7 +250,8 @@ class CatalogVerificationTest(unittest.TestCase):
 
         with patch.dict("os.environ", {"GITHUB_REPOSITORY": "robocode-dev/rumble-bots"}), patch.object(
             verify_catalog, "api", side_effect=fake_api
-        ), patch.object(verify_catalog, "git", side_effect=fake_git), patch.object(
+        ), patch.object(verify_catalog, "unpublished_bot_paths", return_value={"bots/python/Nova"}), patch.object(
+            verify_catalog, "git", side_effect=fake_git), patch.object(
             verify_catalog.subprocess, "run", return_value=CompletedProcess([], 0, "", "")
         ), patch.object(verify_catalog.Path, "read_text", autospec=True, side_effect=lambda path, encoding=None: proposed[path.as_posix()]):
             self.assertEqual((SHA, base), verify_catalog.verify(12, 7))

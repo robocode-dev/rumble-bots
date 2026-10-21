@@ -13,7 +13,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from moderation.assess import classify_paths
-from moderation.moderate import CONTEXT, api
+from moderation.moderate import CONTEXT, GitHubError, api
+from scripts.validate_bot import ValidationError, bot_directories, read_json, resolve_teams, validate_bot
 
 CATALOG_FILES = {"bots/index.json", "bots/owners.json"}
 APP_LOGIN = "tank-royale-rumble-moderator[bot]"
@@ -39,6 +40,20 @@ def source_paths(number: int) -> list[str]:
         page += 1
 
 
+def unpublished_bot_paths(root: Path) -> set[str]:
+    catalog = read_json(root / "bots" / "index.json")
+    active = {entry["name"]: entry for entry in catalog["bots"] if entry["status"] == "active"}
+    bots = resolve_teams([validate_bot(platform, directory, smoke=False)
+                          for platform, directory in bot_directories(root)])
+    return {
+        bot.directory.relative_to(root).as_posix()
+        for bot in bots
+        if (entry := active.get(bot.name)) is None
+        or entry["version"] != bot.config["version"]
+        or entry["sourceHash"] != bot.source_hash
+    }
+
+
 def verify(number: int, source_number: int) -> tuple[str, str]:
     pr = api("GET", f"pulls/{number}")
     head = pr["head"]["sha"]
@@ -54,8 +69,12 @@ def verify(number: int, source_number: int) -> tuple[str, str]:
     if (source["merged_at"] is None or source["base"]["ref"] != "main"
             or not re.fullmatch(r"[A-Za-z0-9-]+", source["user"]["login"])):
         raise VerificationError("Source submission is not a merged main PR")
-    if classify_paths(source_paths(source_number))[0] is None:
+    source_directory = classify_paths(source_paths(source_number))[0]
+    if source_directory is None:
         raise VerificationError("Source PR did not change exactly one bot directory")
+    pending_paths = unpublished_bot_paths(Path.cwd())
+    if pending_paths != {source_directory}:
+        raise VerificationError(f"Other unpublished bot changes need ownership review: {sorted(pending_paths)}")
     status = api("GET", f"commits/{source['head']['sha']}/status")
     moderation = next((item for item in status["statuses"] if item["context"] == CONTEXT), None)
     if (moderation is None or moderation["state"] != "success"
@@ -102,7 +121,7 @@ def main() -> None:
     try:
         head, base = verify(args.pr, args.source_pr)
         kind, reason = "catalog", f"Exact generated catalog matches trusted main and merged bot PR #{args.source_pr}"
-    except (VerificationError, subprocess.CalledProcessError, KeyError, TypeError, ValueError) as error:
+    except (VerificationError, ValidationError, GitHubError, subprocess.CalledProcessError, KeyError, TypeError, ValueError) as error:
         pr = api("GET", f"pulls/{args.pr}")
         head, base = pr["head"]["sha"], pr["base"]["sha"]
         kind, reason = "escalate", f"Catalog verification needs maintainer attention: {error}"
