@@ -217,6 +217,7 @@ class CatalogVerificationTest(unittest.TestCase):
         generated_at = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
         proposed = {"bots/index.json": json.dumps({"generatedAt": generated_at}) + "\n",
                     "bots/owners.json": "{}\n"}
+        regenerated = proposed.copy()
         source = {"merged_at": generated_at, "base": {"ref": "main"},
                   "head": {"sha": "d" * 40}, "merge_commit_sha": "e" * 40,
                   "user": {"login": "contributor"}}
@@ -253,8 +254,11 @@ class CatalogVerificationTest(unittest.TestCase):
         ), patch.object(verify_catalog, "unpublished_bot_paths", return_value={"bots/python/Nova"}), patch.object(
             verify_catalog, "git", side_effect=fake_git), patch.object(
             verify_catalog.subprocess, "run", return_value=CompletedProcess([], 0, "", "")
-        ), patch.object(verify_catalog.Path, "read_text", autospec=True, side_effect=lambda path, encoding=None: proposed[path.as_posix()]):
+        ), patch.object(verify_catalog.Path, "read_text", autospec=True, side_effect=lambda path, encoding=None: regenerated[path.as_posix()]):
             self.assertEqual((SHA, base), verify_catalog.verify(12, 7))
+            regenerated["bots/owners.json"] = '{"owner": "wrong"}\n'
+            with self.assertRaisesRegex(verify_catalog.VerificationError, "Generated content differs"):
+                verify_catalog.verify(12, 7)
 
 
 if __name__ == "__main__":
