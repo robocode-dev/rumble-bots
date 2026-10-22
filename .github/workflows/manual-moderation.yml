@@ -6,7 +6,7 @@ on:
 
 jobs:
   resolve:
-    if: ${{ github.event.issue.pull_request && github.event.comment.user.login == 'flemming-n-larsen' && startsWith(github.event.comment.body, '/moderation approve ') }}
+    if: ${{ github.event.issue.pull_request && startsWith(github.event.comment.body, '/moderation approve ') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read

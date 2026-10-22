@@ -55,7 +55,7 @@ The validator passes its own Python interpreter to Python launchers through `RUM
 
 ## Smoke check and executable scripts
 
-Install Git and make `sh` available; on Windows, use Git for Windows with Git Bash's `sh` on `PATH`. Run the validator from the repository root:
+Install Git and make `sh` available; on Windows, use [Git for Windows](https://gitforwindows.org/) with Git Bash's `sh` on `PATH`. Run the validator from the repository root:
 
 ```shell
 python scripts/validate_bot.py --root . --owner YOUR_GITHUB_ACCOUNT --smoke

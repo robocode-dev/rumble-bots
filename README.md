@@ -8,7 +8,7 @@ See the [bot author guide](https://robocode.dev/rumble/bot-author-guide) for the
 
 1. Choose a [runnable bot template](templates/README.md) and follow its copy-and-rename instructions into `bots/<platform>/<BotName>/`.
 2. Include `<BotName>.json`, `<BotName>.sh`, `<BotName>.cmd`, and source code that uses an official Tank Royale Bot API.
-3. Declare one permitted SPDX license: `MIT`, `Apache-2.0`, `BSD-3-Clause`, or `GPL-3.0-or-later`.
+3. Declare one permitted SPDX license: [MIT](https://choosealicense.com/licenses/mit/), [Apache-2.0](https://choosealicense.com/licenses/apache-2.0/), [BSD-3-Clause](https://choosealicense.com/licenses/bsd-3-clause/), or [GPL-3.0-or-later](https://spdx.org/licenses/GPL-3.0-or-later.html). The [Choose a License comparison](https://choosealicense.com/licenses/) explains their common permissions and conditions.
 4. Run `python scripts/validate_bot.py --root . --owner <your-forge-account> --smoke` before opening a pull request.
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) for the full submission, ownership, licensing, and moderation rules. The [template guide](templates/README.md#smoke-check-and-executable-scripts) explains smoke markers, runtime prerequisites and executable bits. JSON-only TwinDuel teams use the [team template](templates/README.md#json-only-twinduel-team). Local smoke checks only prove source startup; GitHub moderation runs an isolated, complete one-round battle before a clean bot-only PR can be merged automatically.
