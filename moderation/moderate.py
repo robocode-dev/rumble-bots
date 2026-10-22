@@ -10,31 +10,50 @@ import os
 import re
 import sys
 from urllib.error import HTTPError
+from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 CONTEXT = "bot-moderation"
-MODERATOR = "flemming-n-larsen"
+ORG = "robocode-dev"
+MODERATOR_TEAM = "rumble-moderators"
+MODERATOR_MENTION = f"@{ORG}/{MODERATOR_TEAM}"
 
 
 class GitHubError(Exception):
-    pass
+    def __init__(self, message: str, status: int | None = None):
+        super().__init__(message)
+        self.status = status
 
 
-def api(method: str, path: str, payload: dict | None = None):
+def request(method: str, path: str, payload: dict | None = None):
     token = os.environ["GH_TOKEN"]
     data = json.dumps(payload).encode() if payload is not None else None
-    request = Request(
-        f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/{path}",
+    http_request = Request(
+        f"https://api.github.com/{path}",
         data=data, method=method,
         headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json",
                  "X-GitHub-Api-Version": "2026-03-10", "Content-Type": "application/json"},
     )
     try:
-        with urlopen(request, timeout=20) as response:
+        with urlopen(http_request, timeout=20) as response:
             body = response.read()
             return json.loads(body) if body else None
     except HTTPError as error:
-        raise GitHubError(f"GitHub {method} {path}: HTTP {error.code}: {error.read()[:400].decode(errors='replace')}") from error
+        raise GitHubError(f"GitHub {method} {path}: HTTP {error.code}: {error.read()[:400].decode(errors='replace')}", error.code) from error
+
+
+def api(method: str, path: str, payload: dict | None = None):
+    return request(method, f"repos/{os.environ['GITHUB_REPOSITORY']}/{path}", payload)
+
+
+def active_moderator(login: str) -> bool:
+    try:
+        membership = request("GET", f"orgs/{ORG}/teams/{MODERATOR_TEAM}/memberships/{quote(login, safe='')}")
+    except GitHubError as error:
+        if error.status == 404:
+            return False
+        raise
+    return isinstance(membership, dict) and membership.get("state") == "active"
 
 
 def status(sha: str, state: str, description: str, run_url: str = "") -> None:
@@ -64,15 +83,15 @@ def automated(number: int, sha: str, kind: str, reason: str, run_url: str, base_
         return
     if base_sha and pr["base"]["sha"] != base_sha:
         status(sha, "pending", "Base changed during moderation", run_url)
-        comment(number, f"@{MODERATOR} The target branch changed while `{sha[:12]}` was being tested. Please review the current base and retry or resolve with `/moderation approve <reason>`.")
+        comment(number, f"{MODERATOR_MENTION} The target branch changed while `{sha[:12]}` was being tested. Please review the current base and retry or resolve with `/moderation approve <reason>`.")
         return
     reason = reason.strip()[:1200] or "Moderation did not produce a reason"
     if pr["draft"] or kind not in {"clean", "catalog", "reject", "escalate"}:
         kind = "escalate"
         reason = "Draft PR or missing verdict: " + reason
     if kind == "escalate":
-        status(sha, "pending", "Flemming must review this PR", run_url)
-        comment(number, f"@{MODERATOR} Moderation needs your decision for `{sha[:12]}`: {reason}\n\nThe required check stays pending. After reviewing, use `/moderation approve <reason>` or request changes.")
+        status(sha, "pending", "Human moderator review required", run_url)
+        comment(number, f"{MODERATOR_MENTION} Moderation needs your decision for `{sha[:12]}`: {reason}\n\nThe required check stays pending. After reviewing, use `/moderation approve <reason>` or request changes.")
         return
     if kind == "reject":
         status(sha, "failure", "Bot validation or battle failed", run_url)
@@ -98,7 +117,7 @@ def automated(number: int, sha: str, kind: str, reason: str, run_url: str, base_
             raise GitHubError("GitHub did not confirm the merge")
     except GitHubError as error:
         status(sha, "error", "Automatic merge needs maintainer attention", run_url)
-        comment(number, f"@{MODERATOR} The bot passed moderation, but automatic merge failed for `{sha[:12]}`: {error}")
+        comment(number, f"{MODERATOR_MENTION} The bot passed moderation, but automatic merge failed for `{sha[:12]}`: {error}")
         raise
 
 
@@ -109,14 +128,17 @@ def human_override(number: int, sha: str, comment_id: int) -> None:
     entry = api("GET", f"issues/comments/{comment_id}")
     body = entry["body"].strip()
     match = re.fullmatch(r"/moderation approve\s+(.{10,500})", body, re.DOTALL)
-    if entry["user"]["login"].casefold() != MODERATOR or not match:
-        raise GitHubError("Only Flemming may approve an escalated PR with a stated reason")
+    if not match:
+        raise GitHubError("A moderation approval needs a stated reason")
+    moderator = entry["user"]["login"]
+    if not active_moderator(moderator):
+        raise GitHubError("Only an active Tank Royale Rumble moderator may approve an escalated PR")
     combined = api("GET", f"commits/{sha}/status")
     moderation = next((item for item in combined["statuses"] if item["context"] == CONTEXT), None)
     if moderation is None or moderation["state"] != "pending":
         raise GitHubError("Only a pending human escalation may be approved manually")
-    status(sha, "success", "Human moderation by Flemming")
-    comment(number, f"Flemming accepted the escalated moderation for `{sha[:12]}`: {match.group(1).strip()}\n\nMerge remains a human action.")
+    status(sha, "success", "Human moderator review passed")
+    comment(number, f"@{moderator} accepted the escalated moderation for `{sha[:12]}`: {match.group(1).strip()}\n\nMerge remains a human action.")
 
 
 def main() -> int:

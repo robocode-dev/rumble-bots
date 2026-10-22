@@ -1,0 +1,37 @@
+name: Volunteer as a Rumble moderator
+description: Offer to help review submissions and keep the Tank Royale Rumble fair.
+title: "moderator volunteer: "
+body:
+  - type: markdown
+    attributes:
+      value: "This is a public issue. Do not include credentials or private information. Read the [moderator guide](https://robocode.dev/rumble/moderator-guide.html) before applying."
+  - type: textarea
+    id: experience
+    attributes:
+      label: Relevant experience
+      description: Describe your Robocode or Tank Royale experience, the languages you can review, and your experience with GitHub pull requests.
+    validations:
+      required: true
+  - type: textarea
+    id: availability
+    attributes:
+      label: Availability
+      description: How often can you review submissions or help with the quarterly recovery drill?
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Example of your review work
+      description: Link a review, bug report, or code contribution, or explain how you would investigate a suspicious bot submission.
+    validations:
+      required: true
+  - type: checkboxes
+    id: commitments
+    attributes:
+      label: Moderator commitments
+      options:
+        - label: I will give reasons for decisions and keep required checks and branch rules in place.
+          required: true
+        - label: I will disclose conflicts of interest and let another moderator decide cases involving my own bots or account.
+          required: true

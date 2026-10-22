@@ -122,7 +122,7 @@ class ExactCommitDecisionTest(unittest.TestCase):
                             for _, path, payload in calls))
         self.assertFalse(any(path == "pulls/12/merge" for _, path, _ in calls))
 
-    def test_uncertain_result_requires_flemming(self):
+    def test_uncertain_result_requires_human_moderators(self):
         calls = []
 
         def fake_api(method, path, payload=None):
@@ -133,11 +133,11 @@ class ExactCommitDecisionTest(unittest.TestCase):
             moderate.automated(12, SHA, "escalate", "suspicious network code", "")
         self.assertTrue(any(path == f"statuses/{SHA}" and payload["state"] == "pending"
                             for _, path, payload in calls))
-        self.assertTrue(any(path == "issues/12/comments" and "@flemming-n-larsen" in payload["body"]
+        self.assertTrue(any(path == "issues/12/comments" and moderate.MODERATOR_MENTION in payload["body"]
                             for _, path, payload in calls))
         self.assertFalse(any(path == "pulls/12/merge" for _, path, _ in calls))
 
-    def test_only_flemming_can_clear_a_pending_escalation(self):
+    def test_active_team_member_can_clear_a_pending_escalation(self):
         calls = []
 
         def fake_api(method, path, payload=None):
@@ -145,13 +145,16 @@ class ExactCommitDecisionTest(unittest.TestCase):
             if path == "pulls/12":
                 return self.pr
             if path == "issues/comments/42":
-                return {"body": "/moderation approve Reviewed the extra source", "user": {"login": "flemming-n-larsen"}}
+                return {"body": "/moderation approve Reviewed the extra source", "user": {"login": "reviewer"}}
             if path == f"commits/{SHA}/status":
                 return {"statuses": [{"context": moderate.CONTEXT, "state": "pending"}]}
             return {}
 
-        with patch.object(moderate, "api", side_effect=fake_api):
+        with patch.object(moderate, "api", side_effect=fake_api), patch.object(
+            moderate, "active_moderator", return_value=True
+        ) as membership:
             moderate.human_override(12, SHA, 42)
+        membership.assert_called_once_with("reviewer")
         self.assertTrue(any(path == f"statuses/{SHA}" and payload["state"] == "success"
                             for _, path, payload in calls))
         self.assertFalse(any(path == "pulls/12/merge" for _, path, _ in calls))
@@ -164,9 +167,27 @@ class ExactCommitDecisionTest(unittest.TestCase):
                 return {"body": "/moderation approve Looks good to me", "user": {"login": "someone-else"}}
             raise AssertionError("No status or merge may be written")
 
-        with patch.object(moderate, "api", side_effect=fake_api):
+        with patch.object(moderate, "api", side_effect=fake_api), patch.object(
+            moderate, "active_moderator", return_value=False
+        ) as membership:
             with self.assertRaises(moderate.GitHubError):
                 moderate.human_override(12, SHA, 42)
+        membership.assert_called_once_with("someone-else")
+
+    def test_team_membership_must_be_active(self):
+        for state, expected in (("active", True), ("pending", False)):
+            with self.subTest(state=state), patch.object(moderate, "request", return_value={"state": state}) as request:
+                self.assertIs(moderate.active_moderator("reviewer"), expected)
+                request.assert_called_once_with("GET", "orgs/robocode-dev/teams/rumble-moderators/memberships/reviewer")
+
+    def test_absent_or_unavailable_team_membership_cannot_approve(self):
+        with patch.object(moderate, "request", side_effect=moderate.GitHubError("missing", 404)):
+            self.assertFalse(moderate.active_moderator("outsider"))
+        with patch.object(moderate, "request", return_value=None):
+            self.assertFalse(moderate.active_moderator("reviewer"))
+        with patch.object(moderate, "request", side_effect=moderate.GitHubError("forbidden", 403)):
+            with self.assertRaises(moderate.GitHubError):
+                moderate.active_moderator("reviewer")
 
 
 class CatalogVerificationTest(unittest.TestCase):
