@@ -1,0 +1,10 @@
+{
+  "name": "RumbleOnboardingScout",
+  "version": "1.0.0",
+  "authors": ["Flemming N. Larsen"],
+  "description": "Tank Rotale testing bot.",
+  "platform": "JVM",
+  "programmingLang": "Java 25",
+  "gameTypes": ["classic", "1v1", "melee", "twinduel"],
+  "license": "Apache-2.0"
+}
