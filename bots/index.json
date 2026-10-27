@@ -1,22 +1,8 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-21T19:08:53Z",
-  "commit": "89ebc9e78ef40b576dec0bff1cb6ff755183004d",
+  "generatedAt": "2026-10-27T18:30:49Z",
+  "commit": "05c4ecfd6c67ec33e10afa85aa0bc9b81df20416",
   "bots": [
-    {
-      "name": "RumbleTestScout",
-      "version": "1.0.1",
-      "platform": "JVM",
-      "path": "bots/java/RumbleTestScout",
-      "sourceHash": "sha256:a989ca0d1a0d00bf335f956ece11374fdbc23fa6335e7165e70940c45e7a355e",
-      "owner": "robocode-rumble-test",
-      "authors": [
-        "robocode-rumble-test"
-      ],
-      "addedAt": "2026-10-19",
-      "status": "superseded",
-      "teamMembers": []
-    },
     {
       "name": "Corners",
       "version": "1.0.0",
@@ -155,6 +141,20 @@
         "Retcon 0.2.0",
         "Retcon 0.2.0"
       ]
+    },
+    {
+      "name": "RumbleOnboardingScout",
+      "version": "1.0.0",
+      "platform": "JVM",
+      "path": "bots/java/RumbleOnboardingScout",
+      "sourceHash": "sha256:bfed7912342e24e4d3871e8b0015608aa4a3d9959042240353db39860978ca59",
+      "owner": "robocode-rumble-test",
+      "authors": [
+        "Flemming N. Larsen"
+      ],
+      "addedAt": "2026-10-27",
+      "status": "active",
+      "teamMembers": []
     },
     {
       "name": "RumbleTestScout",

@@ -30,9 +30,10 @@
         "robocode-rumble-test"
       ],
       "bots": [
+        "RumbleOnboardingScout",
         "RumbleTestScout"
       ],
-      "activeSlots": 1
+      "activeSlots": 2
     }
   ]
 }
