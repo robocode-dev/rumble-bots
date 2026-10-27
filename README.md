@@ -1,5 +1,7 @@
 # Tank Royale Rumble bots
 
+> **Public Beta.** This catalog is live and its bots are ranked, but the Rumble is still being finished. Tell us what is confusing or broken in the [issue tracker](https://github.com/robocode-dev/rumble-bots/issues/new).
+
 `rumble-bots` is the reviewable, source-only catalog of bots eligible for ranked Tank Royale Rumble battles. Authors submit bots through pull requests; clients consume the generated `bots/index.json` catalog and run exactly the source tree named by its SHA-256 hash.
 
 See the [bot author guide](https://robocode.dev/rumble/bot-author-guide) for the public submission journey, the [battle contributor guide](https://robocode.dev/rumble/client-guide) to run ranked battles, or the [live rankings](https://robocode-dev.github.io/rumble-data/).
