@@ -30,6 +30,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           CATALOG_PR: ${{ github.event.client_payload.pull_request_number }}
           SOURCE_PR: ${{ github.event.client_payload.source_pull_request_number }}
+          RUMBLE_MODERATOR_LOGIN: ${{ vars.RUMBLE_MODERATOR_LOGIN }}
+          RUMBLE_PUBLISHER_LOGIN: ${{ vars.RUMBLE_PUBLISHER_LOGIN }}
         run: |
           set -euo pipefail
           [[ "$CATALOG_PR" =~ ^[0-9]+$ && "$SOURCE_PR" =~ ^[0-9]+$ ]]
@@ -52,7 +54,7 @@ jobs:
           app-id: ${{ secrets.RUMBLE_MODERATOR_APP_ID }}
           private-key: ${{ secrets.RUMBLE_MODERATOR_PRIVATE_KEY }}
           owner: robocode-dev
-          repositories: rumble-bots
+          repositories: ${{ github.event.repository.name }}
       - name: Apply exact-commit catalog verdict
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}

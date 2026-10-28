@@ -62,7 +62,7 @@ jobs:
           app-id: ${{ secrets.RUMBLE_MODERATOR_APP_ID }}
           private-key: ${{ secrets.RUMBLE_MODERATOR_PRIVATE_KEY }}
           owner: robocode-dev
-          repositories: rumble-bots
+          repositories: ${{ github.event.repository.name }}
       - name: Apply verdict to the exact PR head
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}

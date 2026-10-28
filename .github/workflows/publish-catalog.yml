@@ -73,7 +73,7 @@ jobs:
           app-id: ${{ secrets.RUMBLE_MODERATOR_APP_ID }}
           private-key: ${{ secrets.RUMBLE_MODERATOR_PRIVATE_KEY }}
           owner: robocode-dev
-          repositories: rumble-bots
+          repositories: ${{ github.event.repository.name }}
       - uses: actions/checkout@v4
         with:
           ref: main
@@ -93,7 +93,7 @@ jobs:
           app-id: ${{ secrets.RUMBLE_PUBLISHER_APP_ID }}
           private-key: ${{ secrets.RUMBLE_PUBLISHER_PRIVATE_KEY }}
           owner: robocode-dev
-          repositories: rumble-bots
+          repositories: ${{ github.event.repository.name }}
       - name: Open generated catalog pull request
         env:
           MODERATOR_TOKEN: ${{ steps.moderator.outputs.token }}
