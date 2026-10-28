@@ -17,8 +17,8 @@ from moderation.moderate import CONTEXT, GitHubError, api
 from scripts.validate_bot import ValidationError, bot_directories, read_json, resolve_teams, validate_bot
 
 CATALOG_FILES = {"bots/index.json", "bots/owners.json"}
-APP_LOGIN = "tank-royale-rumble-moderator[bot]"
-PUBLISHER_LOGIN = "tank-royale-rumble-publisher[bot]"
+APP_LOGIN = os.environ.get("RUMBLE_MODERATOR_LOGIN") or "tank-royale-rumble-moderator[bot]"
+PUBLISHER_LOGIN = os.environ.get("RUMBLE_PUBLISHER_LOGIN") or "tank-royale-rumble-publisher[bot]"
 
 
 class VerificationError(Exception):
