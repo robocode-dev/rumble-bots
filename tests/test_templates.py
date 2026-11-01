@@ -23,7 +23,8 @@ def copy_template(root: Path, language: str, name: str) -> Path:
     shutil.copytree(REPOSITORY / "templates" / language / "StarterBot", destination)
     for path in list(destination.rglob("*")):
         if path.is_file():
-            path.write_text(path.read_text(encoding="utf-8").replace("StarterBot", name), encoding="utf-8")
+            # Bytes, not text: writing text on Windows would turn every line ending into a Windows line ending.
+            path.write_bytes(path.read_bytes().replace(b"StarterBot", name.encode("utf-8")))
             if "StarterBot" in path.name:
                 path.rename(path.with_name(path.name.replace("StarterBot", name)))
     return destination
@@ -68,7 +69,7 @@ class TemplateSubmissionTests(unittest.TestCase):
         team = self.root / "bots" / "python" / "MyTwins"
         team.mkdir()
         source = REPOSITORY / "templates" / "team" / "StarterTeam" / "StarterTeam.json"
-        (team / "MyTwins.json").write_text(source.read_text().replace("StarterTeam", "MyTwins"), encoding="utf-8")
+        (team / "MyTwins.json").write_bytes(source.read_bytes().replace(b"StarterTeam", b"MyTwins"))
         self.assertEqual(["MyTwins.json"], [path.name for path in team.iterdir()])
         result = self.validate("--generate")
         self.assertEqual(0, result.returncode, result.stderr)

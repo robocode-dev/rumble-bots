@@ -65,6 +65,8 @@ The validator checks the whole catalog checkout, so its existing entries' runtim
 
 Initial Java and NuGet downloads require network access. If a first download exceeds the smoke timeout, run the launcher once with `RUMBLE_SMOKE=1` to populate its external cache, then rerun validation. Preserve the smoke branch when editing your strategy; normal battle execution leaves `RUMBLE_SMOKE` unset.
 
+Use Unix line endings (LF) in every file of the bot. The repository sets this for Git, so staging with Git normally takes care of it, but a file uploaded through the web page or written by a tool is not changed, and the validator rejects a file with Windows line endings (CRLF). A launcher script with them also cannot run under `sh`.
+
 Stage the bot and set the Unix launcher's executable bit in Git on every platform:
 
 ```shell
