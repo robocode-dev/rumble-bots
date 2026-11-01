@@ -1,5 +1,7 @@
 # Contributing a ranked bot
 
+The full walkthrough for bot authors is [Submit a bot to the Rumble](https://robocode.dev/rumble/bot-author-guide). The rules below are the review contract enforced by this repository.
+
 Submit source code only. Bots must use an official Tank Royale Bot API for Java, C#, Python, or TypeScript and run through the checked-in booter-convention scripts. Dependencies are limited to the official API, its declared runtime dependencies and the platform's standard library. TypeScript bots explicitly declare the API's required `ws` runtime peer and commit their `package-lock.json`; unrelated bot libraries remain disallowed. Do not submit binary artifacts, generated dependency folders, custom protocol clients, process launchers, raw sockets, or code that writes outside its temporary directory.
 
 Each bot directory's `license` field is its license grant for the complete directory. By opening a pull request, you certify that you have the right to publish the submitted code under that SPDX license, in the spirit of the Developer Certificate of Origin. Include a full license file if it helps users, but it is optional.
