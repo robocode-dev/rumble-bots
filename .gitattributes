@@ -1,0 +1,4 @@
+# Bot sources are stored and checked out with Unix line endings on every system, so a bot has the same content hash everywhere.
+* text=auto eol=lf
+*.sh text eol=lf
+*.cmd text eol=lf

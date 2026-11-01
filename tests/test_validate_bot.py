@@ -133,7 +133,7 @@ class ValidatorIntegrationTests(unittest.TestCase):
     def test_source_change_without_version_increase_is_rejected(self) -> None:
         self.assertEqual(0, self.run_validator("--generate").returncode)
         source_path = self.root / "bots" / "python" / "Orbit" / "src" / "Orbit.py"
-        source_path.write_text(source_path.read_text(encoding="utf-8") + "\n# changed\n", encoding="utf-8")
+        source_path.write_bytes(source_path.read_bytes() + b"\n# changed\n")  # bytes: write_text would give Windows line endings
         result = self.run_validator()
         self.assertNotEqual(0, result.returncode)
         self.assertIn("without increasing its version", result.stderr)
@@ -261,6 +261,31 @@ class ValidatorIntegrationTests(unittest.TestCase):
         result = self.run_validator()
         self.assertNotEqual(0, result.returncode)
         self.assertIn("executable bit", result.stderr)
+
+    def test_windows_line_endings_in_a_launcher_are_rejected_with_a_plain_message(self) -> None:
+        script = self.root / "bots" / "python" / "Orbit" / "Orbit.sh"
+        script.write_bytes(script.read_bytes().replace(b"\n", b"\r\n"))
+        result = self.run_validator()
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("Orbit.sh has Windows line endings (CRLF)", result.stderr)
+        self.assertIn("convert it to Unix line endings (LF)", result.stderr)
+
+    def test_windows_line_endings_in_a_source_file_or_the_configuration_are_rejected(self) -> None:
+        for relative in ("src/Orbit.py", "Orbit.json"):
+            with self.subTest(relative):
+                path = self.root / "bots" / "python" / "Orbit" / relative
+                original = path.read_bytes()
+                path.write_bytes(original.replace(b"\n", b"\r\n") if b"\n" in original else original + b"\r\n")
+                result = self.run_validator()
+                self.assertNotEqual(0, result.returncode)
+                self.assertIn(f"{relative} has Windows line endings", result.stderr)
+                path.write_bytes(original)
+
+    def test_unix_line_endings_are_accepted(self) -> None:
+        for path in (self.root / "bots" / "python" / "Orbit").rglob("*"):
+            if path.is_file():
+                self.assertNotIn(b"\r\n", path.read_bytes(), str(path))
+        self.assertEqual(0, self.run_validator().returncode)
 
     def test_RBC004_IntegrationNegative_duplicate_bot_names_across_platforms_are_rejected(self) -> None:
         self.add_java_bot("Orbit")

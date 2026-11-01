@@ -104,6 +104,17 @@ def bot_directories(root: Path) -> list[tuple[str, Path]]:
     return result
 
 
+def check_line_endings(directory: Path) -> None:
+    """Reject Windows line endings: the catalog holds Unix line endings, and a launcher script with CRLF cannot run under sh."""
+    for path in sorted(directory.rglob("*")):
+        if not path.is_file() or "__pycache__" in path.parts:
+            continue
+        data = path.read_bytes()
+        if b"\0" not in data and b"\r\n" in data:
+            relative = path.relative_to(directory).as_posix()
+            raise ValidationError(f"{directory}: {relative} has Windows line endings (CRLF); convert it to Unix line endings (LF)")
+
+
 def validate_bot(platform_key: str, directory: Path, *, smoke: bool) -> Bot:
     source_extension, expected_platform, api_token = PLATFORMS[platform_key]
     config = read_json(directory / f"{directory.name}.json")
@@ -116,6 +127,7 @@ def validate_bot(platform_key: str, directory: Path, *, smoke: bool) -> Bot:
         raise ValidationError(f"{directory}: `authors` must be a non-empty list of display names")
     if config["license"] not in ALLOWED_LICENSES:
         raise ValidationError(f"{directory}: `license` must be one of {', '.join(sorted(ALLOWED_LICENSES))}")
+    check_line_endings(directory)
     if "teamMembers" in config:
         members = config["teamMembers"]
         if not isinstance(members, list) or len(members) != 2 or not all(isinstance(member, str) and member for member in members):
