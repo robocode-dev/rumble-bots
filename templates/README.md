@@ -4,10 +4,12 @@ The templates live outside `bots/`, so they do not reserve names or enter the ca
 
 | Language | Copy this directory | Source file to rename | Prerequisites |
 |---|---|---|---|
-| Java | [java/StarterBot](java/StarterBot) | `src/StarterBot.java` | Java 25 and curl |
-| C# | [csharp/StarterBot](csharp/StarterBot) | `src/StarterBot.cs` | .NET SDK 10 |
-| Python | [python/StarterBot](python/StarterBot) | `src/StarterBot.py` | Python 3.11+ with the package from `requirements.txt` installed |
-| TypeScript | [typescript/StarterBot](typescript/StarterBot) | `src/StarterBot.ts` | Node.js 24 and npm |
+| Java | [java/StarterBot](java/StarterBot) | `src/StarterBot.java` | Java and curl |
+| C# | [csharp/StarterBot](csharp/StarterBot) | `src/StarterBot.cs` | .NET SDK |
+| Python | [python/StarterBot](python/StarterBot) | `src/StarterBot.py` | Python with the package from `requirements.txt` installed |
+| TypeScript | [typescript/StarterBot](typescript/StarterBot) | `src/StarterBot.ts` | Node.js and npm |
+
+Use the versions in the Rumble's [list of supported platform versions](https://github.com/robocode-dev/rumble-client#supported-platform-versions). It is the one place they are named: the Rumble follows the newest LTS of each platform, and the versions change there when it moves on.
 
 The templates pin Bot API version 1.3.1 to match the current Rumble client's engine. Java and C# restore the official package from their launchers. Python uses the environment you prepare below. TypeScript uses Node's built-in TypeScript support and installs the API and its declared `ws` runtime peer with `npm ci` in a temporary run directory. Dependency caches and generated output stay outside the submitted bot directory.
 
@@ -61,7 +63,7 @@ Install Git and make `sh` available; on Windows, use [Git for Windows](https://g
 python scripts/validate_bot.py --root . --owner YOUR_GITHUB_ACCOUNT --smoke
 ```
 
-The validator checks the whole catalog checkout, so its existing entries' runtimes must also be available. CI explicitly installs Python, Java 25, .NET 10 and Node.js 24. A template's smoke branch loads its API, prints `RUMBLE_SMOKE_READY MyBot` and exits successfully. The validator sets `RUMBLE_SMOKE=1` and allows 20 seconds per launcher. This checks the source entry point and dependency loading; it does not connect to a battle server. Test your strategy in the Tank Royale GUI before submitting it.
+The validator checks the whole catalog checkout, so its existing entries' runtimes must also be available. CI installs Python, Java, .NET and Node.js in the [versions the Rumble supports](https://github.com/robocode-dev/rumble-client#supported-platform-versions). A template's smoke branch loads its API, prints `RUMBLE_SMOKE_READY MyBot` and exits successfully. The validator sets `RUMBLE_SMOKE=1` and allows 20 seconds per launcher. This checks the source entry point and dependency loading; it does not connect to a battle server. Test your strategy in the Tank Royale GUI before submitting it.
 
 Initial Java and NuGet downloads require network access. If a first download exceeds the smoke timeout, run the launcher once with `RUMBLE_SMOKE=1` to populate its external cache, then rerun validation. Preserve the smoke branch when editing your strategy; normal battle execution leaves `RUMBLE_SMOKE` unset.
 

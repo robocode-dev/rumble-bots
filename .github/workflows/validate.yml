@@ -27,20 +27,36 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Read the Rumble's supported runtime versions
+        id: runtimes
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # The one list of the versions the Rumble supports is in the Rumble client's latest release; this workflow
+        # names none of its own, so bots are checked on exactly what the Rumble runs.
+        run: |
+          tag=$(gh api repos/robocode-dev/rumble-client/releases/latest --jq .tag_name)
+          gh api "repos/robocode-dev/rumble-client/contents/src/main/resources/runtime-versions.properties?ref=$tag" \
+            -H "Accept: application/vnd.github.raw" > "$RUNNER_TEMP/runtime-versions.properties"
+          for name in java dotnet python node; do
+            value=$(sed -n "s/^$name=//p" "$RUNNER_TEMP/runtime-versions.properties" | tr -d '\r')
+            test -n "$value" || { echo "The Rumble's runtime list names no $name version."; exit 1; }
+            echo "$name=$value" >> "$GITHUB_OUTPUT"
+          done
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-      # Java bots run from source (Java 22+ multi-file launch); match the Rumble's JVM.
+          python-version: ${{ steps.runtimes.outputs.python }}
+      # Java bots run from source (Java 22+ multi-file launch), on the Rumble's JVM.
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '25'
+          java-version: ${{ steps.runtimes.outputs.java }}
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ steps.runtimes.outputs.dotnet }}.0.x
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: ${{ steps.runtimes.outputs.node }}
       - run: python -m pip install -r templates/python/StarterBot/requirements.txt
       - run: python -m unittest discover -s tests -v
       - name: Reject hand-edited generated catalog files
