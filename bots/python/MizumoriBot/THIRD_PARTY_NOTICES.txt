@@ -1,0 +1,28 @@
+Third-party source and redistribution notices
+
+Upstream: robocode-dev/rumble-bots, Python StarterBot template
+Source: https://github.com/robocode-dev/rumble-bots/tree/28981c7a469ac064194b41001cd7183ec5ecf189/templates/python/StarterBot
+Fixed commit: 28981c7a469ac064194b41001cd7183ec5ecf189
+License declaration: templates/python/StarterBot/StarterBot.json, license Apache-2.0
+
+MizumoriBot.sh and MizumoriBot.cmd were adapted from the corresponding
+StarterBot launchers by renaming the entry point; attribution comments were added.
+The RUMBLE_SMOKE entry-point pattern in src/MizumoriBot.py was adapted by
+adding config validation and changing the bot name. No template battle logic
+is included. The requirements.txt API pin follows the official template.
+
+The complete upstream Apache-2.0 license is in LICENSE-APACHE-2.0.txt.
+Retain these upstream license obligations when redistributing the derived parts.
+The MIT setting in MizumoriBot.json does not remove these obligations or claim
+that upstream code is available under MIT alone. Apache-2.0 section 4 permits
+different terms for modifications/the derivative work as a whole subject to
+continued compliance with its redistribution conditions.
+
+The fixed upstream tree contains no LICENSE, NOTICE or COPYING file, and the
+copied template files contain no actual copyright-holder notice to reproduce.
+The template's "Your name" field is a placeholder, not a verified holder.
+No upstream copyright holder or year has been invented here. This document is
+our provenance notice; it is not an upstream NOTICE file or an endorsement.
+
+The official Python Bot API and its declared runtime dependencies are installed
+separately. They are not vendored or relicensed by this source-only package.
