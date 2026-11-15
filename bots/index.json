@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-27T18:30:49Z",
-  "commit": "05c4ecfd6c67ec33e10afa85aa0bc9b81df20416",
+  "generatedAt": "2026-11-15T21:48:46Z",
+  "commit": "7b5bedced93a5289888acf407ff8520118ea4ccd",
   "bots": [
     {
       "name": "Corners",
@@ -62,6 +62,20 @@
         "Flemming N. Larsen"
       ],
       "addedAt": "2026-09-15",
+      "status": "active",
+      "teamMembers": []
+    },
+    {
+      "name": "MizumoriBot",
+      "version": "0.6.0-rc1",
+      "platform": "Python",
+      "path": "bots/python/MizumoriBot",
+      "sourceHash": "sha256:baaf333269e5f3b4df8184eaed06ab9eee984f643dc2e96e0a2faf7b54b78937",
+      "owner": "saka2279",
+      "authors": [
+        "saka2279"
+      ],
+      "addedAt": "2026-11-15",
       "status": "active",
       "teamMembers": []
     },
