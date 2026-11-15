@@ -22,7 +22,7 @@
         "Vector",
         "Walls"
       ],
-      "activeSlots": 14
+      "activeSlots": 11
     },
     {
       "ownerId": "robocode-rumble-test",
@@ -33,7 +33,7 @@
         "RumbleOnboardingScout",
         "RumbleTestScout"
       ],
-      "activeSlots": 2
+      "activeSlots": 0
     },
     {
       "ownerId": "saka2279",
