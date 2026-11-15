@@ -34,6 +34,16 @@
         "RumbleTestScout"
       ],
       "activeSlots": 2
+    },
+    {
+      "ownerId": "saka2279",
+      "accounts": [
+        "saka2279"
+      ],
+      "bots": [
+        "MizumoriBot"
+      ],
+      "activeSlots": 1
     }
   ]
 }
