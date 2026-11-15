@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-15T22:14:22Z",
-  "commit": "976bd78813df15bd6ab7e3682e1c46ad848dbb99",
+  "generatedAt": "2026-11-15T22:52:10Z",
+  "commit": "ed1652b200f656d74938b5dada9953d131d5950c",
   "bots": [
     {
       "name": "Orbit",
@@ -89,7 +89,12 @@
       ],
       "addedAt": "2026-09-04",
       "status": "active",
-      "teamMembers": []
+      "teamMembers": [],
+      "gameTypes": [
+        "1v1",
+        "melee",
+        "twinduel"
+      ]
     },
     {
       "name": "CornersCrazy",
@@ -106,6 +111,9 @@
       "teamMembers": [
         "Corners 1.0.0",
         "Crazy 1.0.0"
+      ],
+      "gameTypes": [
+        "twinduel"
       ]
     },
     {
@@ -121,7 +129,12 @@
       ],
       "addedAt": "2026-09-04",
       "status": "active",
-      "teamMembers": []
+      "teamMembers": [],
+      "gameTypes": [
+        "1v1",
+        "melee",
+        "twinduel"
+      ]
     },
     {
       "name": "Fire",
@@ -136,7 +149,12 @@
       ],
       "addedAt": "2026-09-15",
       "status": "active",
-      "teamMembers": []
+      "teamMembers": [],
+      "gameTypes": [
+        "1v1",
+        "melee",
+        "twinduel"
+      ]
     },
     {
       "name": "MizumoriBot",
@@ -150,7 +168,10 @@
       ],
       "addedAt": "2026-11-15",
       "status": "active",
-      "teamMembers": []
+      "teamMembers": [],
+      "gameTypes": [
+        "1v1"
+      ]
     },
     {
       "name": "RamFire",
@@ -165,7 +186,12 @@
       ],
       "addedAt": "2026-09-15",
       "status": "active",
-      "teamMembers": []
+      "teamMembers": [],
+      "gameTypes": [
+        "1v1",
+        "melee",
+        "twinduel"
+      ]
     },
     {
       "name": "Retcon",
@@ -179,7 +205,12 @@
       ],
       "addedAt": "2026-09-29",
       "status": "active",
-      "teamMembers": []
+      "teamMembers": [],
+      "gameTypes": [
+        "1v1",
+        "melee",
+        "twinduel"
+      ]
     },
     {
       "name": "RetconTwins",
@@ -196,6 +227,9 @@
       "teamMembers": [
         "Retcon 0.2.0",
         "Retcon 0.2.0"
+      ],
+      "gameTypes": [
+        "twinduel"
       ]
     },
     {
@@ -211,7 +245,12 @@
       ],
       "addedAt": "2026-09-04",
       "status": "active",
-      "teamMembers": []
+      "teamMembers": [],
+      "gameTypes": [
+        "1v1",
+        "melee",
+        "twinduel"
+      ]
     },
     {
       "name": "Target",
@@ -226,7 +265,12 @@
       ],
       "addedAt": "2026-09-15",
       "status": "active",
-      "teamMembers": []
+      "teamMembers": [],
+      "gameTypes": [
+        "1v1",
+        "melee",
+        "twinduel"
+      ]
     },
     {
       "name": "TrackFire",
@@ -241,7 +285,12 @@
       ],
       "addedAt": "2026-09-15",
       "status": "active",
-      "teamMembers": []
+      "teamMembers": [],
+      "gameTypes": [
+        "1v1",
+        "melee",
+        "twinduel"
+      ]
     },
     {
       "name": "Walls",
@@ -256,7 +305,12 @@
       ],
       "addedAt": "2026-09-15",
       "status": "active",
-      "teamMembers": []
+      "teamMembers": [],
+      "gameTypes": [
+        "1v1",
+        "melee",
+        "twinduel"
+      ]
     }
   ]
 }
