@@ -177,8 +177,7 @@ def assess(base: str, head: str, owner: str) -> Verdict:
         try:
             pr_root = Path(checkout)
             directory = pr_root / bot_path
-            if not directory.is_dir():
-                return Verdict("reject", f"Submitted bot directory is missing: {bot_path}")
+            removal = not directory.is_dir()  # every file of the only changed bot directory was deleted
             platform = bot_path.split("/")[1]
             name = directory.name
             try:
@@ -189,6 +188,8 @@ def assess(base: str, head: str, owner: str) -> Verdict:
                 if "source contains restricted construct" in str(error):
                     return Verdict("escalate", str(error))
                 return Verdict("reject", str(error))
+            if removal:
+                return Verdict("escalate", f"Bot removal needs moderator review: {bot_path}")
             target = next((bot for bot in bots if bot.directory == directory), None)
             if target is None:
                 return Verdict("reject", f"No bot found at {bot_path}")

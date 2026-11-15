@@ -7,7 +7,6 @@ on:
       - 'bots/**'
       - '!bots/index.json'
       - '!bots/owners.json'
-      - '!bots/banned.json'
   workflow_dispatch:
     inputs:
       pull_request_number:

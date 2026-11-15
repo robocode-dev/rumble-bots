@@ -14,9 +14,11 @@ from pathlib import Path
 
 from moderation.assess import classify_paths
 from moderation.moderate import CONTEXT, GitHubError, api
-from scripts.validate_bot import PLATFORMS, ValidationError, bot_directories, read_json, resolve_teams, validate_bot
+from scripts.validate_bot import (PLATFORMS, ValidationError, bot_directories, read_json,
+                                  resolve_teams, unpublished_bots, validate_bot)
 
 CATALOG_FILES = {"bots/index.json", "bots/owners.json"}
+BANNED_FILE = "bots/banned.json"
 APP_LOGIN = os.environ.get("RUMBLE_MODERATOR_LOGIN") or "tank-royale-rumble-moderator[bot]"
 PUBLISHER_LOGIN = os.environ.get("RUMBLE_PUBLISHER_LOGIN") or "tank-royale-rumble-publisher[bot]"
 
@@ -41,29 +43,29 @@ def source_files(number: int) -> list[dict]:
         page += 1
 
 
-def removed_bot_directories(files: list[dict]) -> set[str]:
-    """Return the bot directories a source PR only deleted files from, or an empty set otherwise."""
-    directories: set[str] = set()
+def moderator_change_paths(files: list[dict]) -> set[str]:
+    """Return what a moderator's source PR changed, or an empty set if it changed anything else.
+
+    A moderator PR only edits bots/banned.json and/or deletes whole bot directories. It attributes
+    no new ownership, so its catalog PR must not publish any other bot change.
+    """
+    paths: set[str] = set()
     for item in files:
         parts = item["filename"].split("/")
-        if item.get("status") != "removed" or len(parts) < 4 or parts[0] != "bots" or parts[1] not in PLATFORMS:
+        if item["filename"] == BANNED_FILE and item.get("status") != "removed":
+            paths.add(BANNED_FILE)
+        elif item.get("status") == "removed" and len(parts) >= 4 and parts[0] == "bots" and parts[1] in PLATFORMS:
+            paths.add("/".join(parts[:3]))
+        else:
             return set()
-        directories.add("/".join(parts[:3]))
-    return directories
+    return paths
 
 
 def unpublished_bot_paths(root: Path) -> set[str]:
     catalog = read_json(root / "bots" / "index.json")
-    active = {entry["name"]: entry for entry in catalog["bots"] if entry["status"] == "active"}
     bots = resolve_teams([validate_bot(platform, directory, smoke=False)
                           for platform, directory in bot_directories(root)])
-    return {
-        bot.directory.relative_to(root).as_posix()
-        for bot in bots
-        if (entry := active.get(bot.name)) is None
-        or entry["version"] != bot.config["version"]
-        or entry["sourceHash"] != bot.source_hash
-    }
+    return {bot.directory.relative_to(root).as_posix() for bot in unpublished_bots(bots, catalog["bots"])}
 
 
 def verify(number: int, source_number: int) -> tuple[str, str]:
@@ -82,10 +84,9 @@ def verify(number: int, source_number: int) -> tuple[str, str]:
             or not re.fullmatch(r"[A-Za-z0-9-]+", source["user"]["login"])):
         raise VerificationError("Source submission is not a merged main PR")
     files = source_files(source_number)
-    removed = removed_bot_directories(files)
-    if removed:
-        # A moderator's removal PR retires bots; it attributes no new ownership.
-        if any(Path(directory).exists() for directory in removed):
+    moderated = moderator_change_paths(files)
+    if moderated:
+        if any(Path(path).exists() for path in moderated - {BANNED_FILE}):
             raise VerificationError("A removed bot directory still exists on main")
         expected_pending: set[str] = set()
     else:
@@ -102,7 +103,7 @@ def verify(number: int, source_number: int) -> tuple[str, str]:
             or (moderation.get("creator") or {}).get("login") != APP_LOGIN):
         raise VerificationError("Source bot has no successful moderator App status")
     try:
-        git("diff", "--quiet", source["head"]["sha"], base, "--", *sorted(removed or expected_pending))
+        git("diff", "--quiet", source["head"]["sha"], base, "--", *sorted(moderated or expected_pending))
     except subprocess.CalledProcessError as error:
         raise VerificationError("Merged source bot content differs from current main") from error
     subprocess.run(["git", "fetch", "--no-tags", "origin", f"+refs/pull/{number}/head:refs/remotes/origin/catalog-verify"], check=True)

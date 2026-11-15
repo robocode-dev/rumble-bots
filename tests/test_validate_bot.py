@@ -189,6 +189,93 @@ class ValidatorIntegrationTests(unittest.TestCase):
         self.add_java_bot("SpinBot")
         self.assertIn("belongs to owner", self.run_validator(owner="alice").stderr)
 
+    def statuses(self, *names: str) -> dict[str, list[str]]:
+        catalog = json.loads((self.root / "bots" / "index.json").read_text(encoding="utf-8"))
+        return {name: [entry["status"] for entry in catalog["bots"] if entry["name"] == name] for name in names}
+
+    def disqualify(self, *names: str) -> None:
+        banned = {"schemaVersion": 1, "bannedOwners": [], "disqualifiedBots": [{"bot": name} for name in names]}
+        (self.root / "bots" / "banned.json").write_text(json.dumps(banned), encoding="utf-8")
+
+    def test_disqualified_bot_and_its_team_leave_the_active_catalog(self) -> None:
+        self.assertEqual(0, self.run_validator("--generate").returncode)
+        catalog = json.loads((self.root / "bots" / "index.json").read_text(encoding="utf-8"))
+        added_at = next(entry["addedAt"] for entry in catalog["bots"] if entry["name"] == "Crazy")
+        self.disqualify("Crazy")
+
+        # Moderators publish the disqualification; the moderator is not the bots' owner.
+        for _ in range(2):  # it also survives a later regeneration
+            result = self.run_validator("--generate", owner="moderator")
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertEqual({"Crazy": ["disqualified"], "CornersCrazy": ["disqualified"], "Corners": ["active"]},
+                             self.statuses("Crazy", "CornersCrazy", "Corners"))
+        owners = json.loads((self.root / "bots" / "owners.json").read_text(encoding="utf-8"))
+        record = next(owner for owner in owners["owners"] if owner["ownerId"] == TEST_OWNER)
+        self.assertIn("Crazy", record["bots"])
+        self.assertNotIn("moderator", [owner["ownerId"] for owner in owners["owners"]])
+
+        # The unchanged disqualified bot does not block another owner's submission ...
+        self.add_bot("Nova")
+        result = self.run_validator("--generate", owner="alice")
+        self.assertEqual(0, result.returncode, result.stderr)
+        # ... but a changed one is rejected.
+        source = next((self.root / "bots" / "java" / "Crazy").rglob("*.java"))
+        source.write_bytes(source.read_bytes() + b"\n// changed\n")
+        self.assertIn("bot `Crazy` is disqualified", self.run_validator(owner=TEST_OWNER).stderr)
+        source.write_bytes(source.read_bytes().removesuffix(b"\n// changed\n"))
+        # A team with a disqualified member cannot be submitted either.
+        self.assertIn("team `CornersCrazy` has a disqualified member", self.bump_team("CornersCrazy").stderr)
+
+        # Lifting the disqualification republishes the unchanged bots for their owner.
+        self.disqualify()
+        result = self.run_validator("--generate", owner="moderator")
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual({"Crazy": ["disqualified", "active"], "CornersCrazy": ["disqualified", "active"]},
+                         self.statuses("Crazy", "CornersCrazy"))
+        catalog = json.loads((self.root / "bots" / "index.json").read_text(encoding="utf-8"))
+        crazy = next(entry for entry in catalog["bots"] if entry["name"] == "Crazy" and entry["status"] == "active")
+        self.assertEqual(TEST_OWNER, crazy["owner"])
+        self.assertEqual(added_at, crazy["addedAt"])
+
+        # Disqualifying it again records no duplicate entry.
+        self.disqualify("Crazy")
+        self.assertEqual(0, self.run_validator("--generate", owner="moderator").returncode)
+        self.assertEqual({"Crazy": ["disqualified"]}, self.statuses("Crazy"))
+
+    def bump_team(self, name: str) -> subprocess.CompletedProcess[str]:
+        config_path = next(self.root.glob(f"bots/*/{name}/{name}.json"))
+        original = config_path.read_bytes()
+        config = json.loads(original)
+        config["version"] = "9.9.9"
+        config_path.write_text(json.dumps(config), encoding="utf-8")
+        result = self.run_validator(owner=TEST_OWNER)
+        config_path.write_bytes(original)
+        return result
+
+    def test_a_non_owner_cannot_restore_a_once_disqualified_version(self) -> None:
+        config_path = self.root / "bots" / "java" / "SpinBot" / "SpinBot.json"
+        original = config_path.read_bytes()
+        self.assertEqual(0, self.run_validator("--generate").returncode)
+        self.disqualify("SpinBot")
+        self.assertEqual(0, self.run_validator("--generate", owner="moderator").returncode)
+        self.disqualify()
+        self.assertEqual(0, self.run_validator("--generate", owner="moderator").returncode)
+        config = json.loads(original)
+        config["version"] = "1.0.4"
+        config_path.write_text(json.dumps(config), encoding="utf-8")
+        self.assertEqual(0, self.run_validator("--generate").returncode)
+
+        config_path.write_bytes(original)  # back to the bytes of the disqualified 1.0.0
+        self.assertIn("belongs to owner", self.run_validator(owner="alice").stderr)
+
+    def test_a_removed_and_disqualified_bot_is_recorded_as_disqualified(self) -> None:
+        self.assertEqual(0, self.run_validator("--generate").returncode)
+        shutil.rmtree(self.root / "bots" / "java" / "SpinBot")
+        self.disqualify("SpinBot")
+        result = self.run_validator("--generate", owner="moderator")
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual({"SpinBot": ["disqualified"]}, self.statuses("SpinBot"))
+
     def test_new_bot_from_another_owner_ignores_unchanged_catalog_entries(self) -> None:
         self.assertEqual(0, self.run_validator("--generate").returncode)
         self.add_bot("Nova")
