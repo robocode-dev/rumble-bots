@@ -430,6 +430,52 @@ class ValidatorIntegrationTests(unittest.TestCase):
                 self.assertNotIn(b"\r\n", path.read_bytes(), str(path))
         self.assertEqual(0, self.run_validator().returncode)
 
+    def set_game_types(self, name: str, game_types: object) -> None:
+        config_path = self.root / "bots" / "python" / name / f"{name}.json"
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        config["gameTypes"] = game_types
+        config_path.write_text(json.dumps(config), encoding="utf-8")
+
+    def test_catalog_publishes_the_game_types_each_entry_plays(self) -> None:
+        self.add_bot("Nova")
+        self.set_game_types("Nova", ["1v1"])
+        result = self.run_validator("--generate")
+        self.assertEqual(0, result.returncode, result.stderr)
+        catalog = json.loads((self.root / "bots" / "index.json").read_text(encoding="utf-8"))
+        entries = {entry["name"]: entry for entry in catalog["bots"] if entry["status"] == "active"}
+        self.assertEqual(["1v1"], entries["Nova"]["gameTypes"])
+        self.assertEqual(["1v1", "melee", "twinduel"], entries["Corners"]["gameTypes"])
+        self.assertEqual(["twinduel"], entries["CornersCrazy"]["gameTypes"])
+
+    def test_invalid_game_types_are_rejected(self) -> None:
+        # A wrongly cased or unranked name would otherwise leave the bot silently in no ranking.
+        for game_types in ("1v1", [], ["1v1", "1v1"], [""], ["Melee"], ["1V1"], ["classic"], ["1v1", "meele"]):
+            with self.subTest(game_types=game_types):
+                self.set_game_types("Orbit", game_types)
+                self.assertIn("`gameTypes` must be a non-empty list of distinct Rumble game types: 1v1, melee, twinduel",
+                              self.run_validator().stderr)
+
+    def test_a_team_member_must_declare_twinduel(self) -> None:
+        self.add_bot("Nova")
+        self.set_game_types("Nova", ["1v1", "melee"])
+        self.add_team("OrbitNova", ["Orbit 1.0.0", "Nova 1.0.0"])
+        self.assertIn("team member `Nova 1.0.0` does not declare the `twinduel` game type", self.run_validator().stderr)
+
+    def test_a_team_declares_no_game_type_but_twinduel(self) -> None:
+        self.add_bot("Nova")
+        self.add_team("OrbitNova", ["Orbit 1.0.0", "Nova 1.0.0"])
+        config_path = self.root / "bots" / "python" / "OrbitNova" / "OrbitNova.json"
+        for game_types, accepted in ((["twinduel"], True), (["1v1"], False), ("twinduel", False)):
+            with self.subTest(game_types=game_types):
+                config = json.loads(config_path.read_text(encoding="utf-8"))
+                config["gameTypes"] = game_types
+                config_path.write_text(json.dumps(config), encoding="utf-8")
+                result = self.run_validator()
+                if accepted:
+                    self.assertEqual(0, result.returncode, result.stderr)
+                else:
+                    self.assertIn("a team plays only `twinduel`", result.stderr)
+
     def test_RBC004_IntegrationNegative_duplicate_bot_names_across_platforms_are_rejected(self) -> None:
         self.add_java_bot("Orbit")
 

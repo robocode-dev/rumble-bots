@@ -27,6 +27,10 @@ PLATFORMS = {
 FORBIDDEN_SUFFIXES = {".dll", ".exe", ".jar", ".so", ".dylib", ".pyc", ".class", ".zip", ".tar", ".gz"}
 FORBIDDEN_TOKENS = ("processbuilder", "runtime.exec", "subprocess", "os.system", "child_process", "system.diagnostics.process", "socket", "ctypes", "dllimport", "eval(")
 TYPESCRIPT_API = "@robocode.dev/tank-royale-bot-api"
+# Teams play only this game type; an individual bot must declare it to be a team member.
+TEAM_GAME_TYPE = "twinduel"
+# The game types the Rumble ranks. Names are matched exactly, so a typo would leave a bot in no ranking.
+RANKED_GAME_TYPES = ("1v1", "melee", TEAM_GAME_TYPE)
 # The official API's NodeRuntimeAdapter requires its declared `ws` runtime peer.
 # Review this boundary against the published API manifest when its dependency set changes.
 TYPESCRIPT_RUNTIME_PEERS = {"ws"}
@@ -59,6 +63,14 @@ class Bot:
             platforms = sorted({member.platform for member in self.team_members})
             return platforms[0] if len(platforms) == 1 else "Mixed"
         return PLATFORMS[self.platform_key][1]
+
+    @property
+    def game_types(self) -> list[str] | None:
+        """Return the ranked game types this entry plays, or None when an individual bot declares none (any)."""
+        if self.team_member_identities:
+            return [TEAM_GAME_TYPE]
+        value = self.config.get("gameTypes")
+        return list(value) if isinstance(value, list) else None
 
     @property
     def team_member_identities(self) -> list[str]:
@@ -135,7 +147,15 @@ def validate_bot(platform_key: str, directory: Path, *, smoke: bool) -> Bot:
         extra = sorted(path.relative_to(directory).as_posix() for path in directory.rglob("*") if path.name != f"{directory.name}.json")
         if extra:
             raise ValidationError(f"{directory}: a team directory must contain only {directory.name}.json, found {', '.join(extra)}")
+        if config.get("gameTypes", [TEAM_GAME_TYPE]) != [TEAM_GAME_TYPE]:
+            raise ValidationError(f"{directory}: a team plays only `{TEAM_GAME_TYPE}`; omit `gameTypes` or set it to [\"{TEAM_GAME_TYPE}\"]")
         return Bot(directory, platform_key, config, tree_hash(directory))
+    game_types = config.get("gameTypes")
+    if game_types is not None and (not isinstance(game_types, list) or not game_types
+                                   or not all(game_type in RANKED_GAME_TYPES for game_type in game_types)
+                                   or len(set(game_types)) != len(game_types)):
+        raise ValidationError(f"{directory}: `gameTypes` must be a non-empty list of distinct Rumble game types: "
+                              f"{', '.join(RANKED_GAME_TYPES)}")
     if not config.get("platform"):
         raise ValidationError(f"{directory}: missing required `platform` in {directory.name}.json")
     if config["platform"] != expected_platform:
@@ -242,6 +262,8 @@ def resolve_teams(bots: list[Bot]) -> list[Bot]:
                 raise ValidationError(f"{bot.directory}: unknown team member `{identity}`")
             if member.team_member_identities:
                 raise ValidationError(f"{bot.directory}: team member `{identity}` cannot be another team")
+            if member.game_types is not None and TEAM_GAME_TYPE not in member.game_types:
+                raise ValidationError(f"{bot.directory}: team member `{identity}` does not declare the `{TEAM_GAME_TYPE}` game type")
             members.append(member)
         resolved.append(replace(bot, team_members=tuple(members)))
     return resolved
@@ -387,7 +409,10 @@ def generated_catalog(bots: list[Bot], root: Path, owner: str, generated_at: dat
         previous = published_entries.get((bot.name, bot.config["version"]))
         status = "disqualified" if bot.name in excluded else "active"
         team_members = list(bot.team_member_identities)
-        published.append({"name": bot.name, "version": bot.config["version"], "platform": bot.platform, "path": bot.directory.relative_to(root).as_posix(), "sourceHash": bot.source_hash, "owner": owner_by_bot.get(bot.name, owner), "authors": bot.config["authors"], "addedAt": previous.get("addedAt", today) if previous else today, "status": status, "teamMembers": team_members})
+        entry = {"name": bot.name, "version": bot.config["version"], "platform": bot.platform, "path": bot.directory.relative_to(root).as_posix(), "sourceHash": bot.source_hash, "owner": owner_by_bot.get(bot.name, owner), "authors": bot.config["authors"], "addedAt": previous.get("addedAt", today) if previous else today, "status": status, "teamMembers": team_members}
+        if bot.game_types is not None:
+            entry["gameTypes"] = bot.game_types  # the rankings it enters; absent means every game type for its kind
+        published.append(entry)
     catalog = {"schemaVersion": 1, "generatedAt": generated_at.replace(microsecond=0).isoformat().replace("+00:00", "Z"), "commit": os.environ.get("GITHUB_SHA", "local"), "bots": history + published}
     return catalog, owner_data
 

@@ -35,7 +35,7 @@ In the copied directory, replace every `StarterBot` identifier in file contents 
 
 For TypeScript, retain both `package.json` and `package-lock.json`. The package name is private and need not match the bot name. If you intentionally change a dependency version, regenerate the lockfile with `npm install --package-lock-only --ignore-scripts --no-audit --no-fund --prefix bots/typescript/MyBot` and submit it for review. The allowed direct dependency set is the official API and its declared `ws` runtime peer; adding a different library is rejected.
 
-Edit the JSON `authors`, `description` and `license` to describe your bot. Start at version `1.0.0`. The directory, JSON filename and JSON `name` must match exactly, including case. The declared SPDX license applies to the complete submitted directory; retain a license you have the right to grant.
+Edit the JSON `authors`, `description` and `license` to describe your bot. Start at version `1.0.0`. The directory, JSON filename and JSON `name` must match exactly, including case. The declared SPDX license applies to the complete submitted directory; retain a license you have the right to grant. The JSON `gameTypes` decides which rankings the bot enters: keep only the game types it is built for among `1v1` and `melee`, and keep `twinduel` if it may be a member of a TwinDuel team.
 
 For Python, create an environment outside the bot directory and install the declared API. On a Unix shell:
 
