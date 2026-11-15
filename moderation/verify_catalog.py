@@ -14,7 +14,7 @@ from pathlib import Path
 
 from moderation.assess import classify_paths
 from moderation.moderate import CONTEXT, GitHubError, api
-from scripts.validate_bot import ValidationError, bot_directories, read_json, resolve_teams, validate_bot
+from scripts.validate_bot import PLATFORMS, ValidationError, bot_directories, read_json, resolve_teams, validate_bot
 
 CATALOG_FILES = {"bots/index.json", "bots/owners.json"}
 APP_LOGIN = os.environ.get("RUMBLE_MODERATOR_LOGIN") or "tank-royale-rumble-moderator[bot]"
@@ -30,15 +30,26 @@ def git(*args: str) -> str:
     return result.stdout.strip()
 
 
-def source_paths(number: int) -> list[str]:
-    paths = []
+def source_files(number: int) -> list[dict]:
+    items = []
     page = 1
     while True:
         files = api("GET", f"pulls/{number}/files?per_page=100&page={page}")
-        paths.extend(item["filename"] for item in files)
+        items.extend(files)
         if len(files) < 100:
-            return paths
+            return items
         page += 1
+
+
+def removed_bot_directories(files: list[dict]) -> set[str]:
+    """Return the bot directories a source PR only deleted files from, or an empty set otherwise."""
+    directories: set[str] = set()
+    for item in files:
+        parts = item["filename"].split("/")
+        if item.get("status") != "removed" or len(parts) < 4 or parts[0] != "bots" or parts[1] not in PLATFORMS:
+            return set()
+        directories.add("/".join(parts[:3]))
+    return directories
 
 
 def unpublished_bot_paths(root: Path) -> set[str]:
@@ -70,11 +81,20 @@ def verify(number: int, source_number: int) -> tuple[str, str]:
     if (source["merged_at"] is None or source["base"]["ref"] != "main"
             or not re.fullmatch(r"[A-Za-z0-9-]+", source["user"]["login"])):
         raise VerificationError("Source submission is not a merged main PR")
-    source_directory = classify_paths(source_paths(source_number))[0]
-    if source_directory is None:
-        raise VerificationError("Source PR did not change exactly one bot directory")
+    files = source_files(source_number)
+    removed = removed_bot_directories(files)
+    if removed:
+        # A moderator's removal PR retires bots; it attributes no new ownership.
+        if any(Path(directory).exists() for directory in removed):
+            raise VerificationError("A removed bot directory still exists on main")
+        expected_pending: set[str] = set()
+    else:
+        source_directory = classify_paths([item["filename"] for item in files])[0]
+        if source_directory is None:
+            raise VerificationError("Source PR did not change exactly one bot directory")
+        expected_pending = {source_directory}
     pending_paths = unpublished_bot_paths(Path.cwd())
-    if pending_paths != {source_directory}:
+    if pending_paths != expected_pending:
         raise VerificationError(f"Other unpublished bot changes need ownership review: {sorted(pending_paths)}")
     statuses = api("GET", f"commits/{source['head']['sha']}/statuses?per_page=100")
     moderation = next((item for item in statuses if item["context"] == CONTEXT), None)
@@ -82,7 +102,7 @@ def verify(number: int, source_number: int) -> tuple[str, str]:
             or (moderation.get("creator") or {}).get("login") != APP_LOGIN):
         raise VerificationError("Source bot has no successful moderator App status")
     try:
-        git("diff", "--quiet", source["head"]["sha"], base, "--", source_directory)
+        git("diff", "--quiet", source["head"]["sha"], base, "--", *sorted(removed or expected_pending))
     except subprocess.CalledProcessError as error:
         raise VerificationError("Merged source bot content differs from current main") from error
     subprocess.run(["git", "fetch", "--no-tags", "origin", f"+refs/pull/{number}/head:refs/remotes/origin/catalog-verify"], check=True)
