@@ -1,0 +1,14 @@
+{
+  "name": "MizumoriBot",
+  "version": "0.6.0-rc1",
+  "authors": [
+    "saka2279"
+  ],
+  "description": "Rule-based 1v1 duelist with adaptive targeting and wave-aware movement.",
+  "platform": "Python",
+  "programmingLang": "Python 3.12",
+  "gameTypes": [
+    "1v1"
+  ],
+  "license": "MIT"
+}
