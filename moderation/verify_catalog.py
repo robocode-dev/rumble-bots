@@ -12,13 +12,12 @@ import subprocess
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from moderation.assess import classify_paths
+from moderation.assess import BANNED_FILE, classify_paths
 from moderation.moderate import CONTEXT, GitHubError, api
 from scripts.validate_bot import (PLATFORMS, ValidationError, bot_directories, read_json,
                                   resolve_teams, unpublished_bots, validate_bot)
 
 CATALOG_FILES = {"bots/index.json", "bots/owners.json"}
-BANNED_FILE = "bots/banned.json"
 APP_LOGIN = os.environ.get("RUMBLE_MODERATOR_LOGIN") or "tank-royale-rumble-moderator[bot]"
 PUBLISHER_LOGIN = os.environ.get("RUMBLE_PUBLISHER_LOGIN") or "tank-royale-rumble-publisher[bot]"
 
@@ -52,7 +51,7 @@ def moderator_change_paths(files: list[dict]) -> set[str]:
     paths: set[str] = set()
     for item in files:
         parts = item["filename"].split("/")
-        if item["filename"] == BANNED_FILE and item.get("status") != "removed":
+        if item["filename"] == BANNED_FILE and item.get("status") == "modified":
             paths.add(BANNED_FILE)
         elif item.get("status") == "removed" and len(parts) >= 4 and parts[0] == "bots" and parts[1] in PLATFORMS:
             paths.add("/".join(parts[:3]))

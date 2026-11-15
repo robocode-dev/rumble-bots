@@ -21,12 +21,16 @@ from scripts.validate_bot import (  # noqa: E402
     ValidationError,
     bot_directories,
     check_governance,
+    disqualified_bot_names,
+    read_json,
     resolve_teams,
+    unpublished_bots,
     validate_bot,
 )
 
 IMAGE = "ghcr.io/robocode-dev/rumble-client@sha256:32ab3259f0ce69f319174b54ba36f4d85949c1a30ea4e65a94010b9c931acf2d"
 STATUS = "bot-moderation"
+BANNED_FILE = "bots/banned.json"
 RISK_PATTERNS = (
     r"\b(?:subprocess|ctypes|socket|importlib|__import__|eval|exec|compile)\b",
     r"\b(?:ProcessBuilder|Runtime\.getRuntime|System\.exit|java\.net|java\.nio\.file|Class\.forName|Unsafe)\b",
@@ -158,6 +162,21 @@ def run_battle(directory: Path, name: str, version: str) -> Verdict:
     return Verdict("clean", f"{name} {version} completed one round against {reference}; source and security checks passed")
 
 
+def assess_moderator_change(pr_root: Path, removed: set[str], banned_changed: bool) -> Verdict:
+    """Send a removal or banned.json change to the moderators, unless it leaves the bots invalid.
+
+    It attributes no submission, so the author's governance does not apply; the remaining bots
+    must still validate, so that no team is left without its member.
+    """
+    try:
+        resolve_teams([validate_bot(key, path, smoke=False) for key, path in bot_directories(pr_root)])
+        disqualified_bot_names(read_json(pr_root / BANNED_FILE))
+    except (ValidationError, OSError, UnicodeError, KeyError, TypeError) as error:
+        return Verdict("reject", f"Moderator change leaves the bots invalid: {error}")
+    changes = (["banned.json changed"] if banned_changed else []) + [f"removed {path}" for path in sorted(removed)]
+    return Verdict("escalate", "Moderator change needs review: " + "; ".join(changes))
+
+
 def assess(base: str, head: str, owner: str) -> Verdict:
     if not re.fullmatch(r"[0-9a-f]{40}", base) or not re.fullmatch(r"[0-9a-f]{40}", head):
         return Verdict("escalate", "Invalid Git revision in PR event")
@@ -165,7 +184,10 @@ def assess(base: str, head: str, owner: str) -> Verdict:
         return Verdict("escalate", "Invalid PR author login")
     paths = changed_files(base, head)
     bot_path, reason = classify_paths(paths)
-    if not bot_path:
+    bot_directories_changed = {"/".join(path.split("/")[:3]) for path in paths if path != BANNED_FILE}
+    # A moderator change only edits banned.json and/or deletes whole bot directories; check it in the worktree.
+    moderator_candidate = all(path == BANNED_FILE or classify_paths([path])[0] for path in paths)
+    if not bot_path and not moderator_candidate:
         return Verdict("escalate", reason)
     try:
         safe_tree(head)
@@ -176,8 +198,12 @@ def assess(base: str, head: str, owner: str) -> Verdict:
                        check=True, stdout=subprocess.DEVNULL)
         try:
             pr_root = Path(checkout)
+            removed = {path for path in bot_directories_changed if not (pr_root / path).is_dir()}
+            if moderator_candidate and removed == bot_directories_changed and (removed or BANNED_FILE in paths):
+                return assess_moderator_change(pr_root, removed, BANNED_FILE in paths)
+            if not bot_path:
+                return Verdict("escalate", reason)
             directory = pr_root / bot_path
-            removal = not directory.is_dir()  # every file of the only changed bot directory was deleted
             platform = bot_path.split("/")[1]
             name = directory.name
             try:
@@ -188,11 +214,14 @@ def assess(base: str, head: str, owner: str) -> Verdict:
                 if "source contains restricted construct" in str(error):
                     return Verdict("escalate", str(error))
                 return Verdict("reject", str(error))
-            if removal:
-                return Verdict("escalate", f"Bot removal needs moderator review: {bot_path}")
             target = next((bot for bot in bots if bot.directory == directory), None)
             if target is None:
                 return Verdict("reject", f"No bot found at {bot_path}")
+            catalog_path = pr_root / "bots" / "index.json"
+            catalog = read_json(catalog_path).get("bots", []) if catalog_path.exists() else []
+            if not unpublished_bots([target], catalog):
+                # e.g. the exact bytes of a disqualified bot whose directory was deleted
+                return Verdict("escalate", f"{target.display_name} matches an existing catalog entry and is not a new submission")
             if target.team_member_identities:
                 return Verdict("escalate", "TwinDuel team metadata needs human review")
             issues = scan_files(directory) + scan_source(directory) + check_launchers(platform, name, directory)

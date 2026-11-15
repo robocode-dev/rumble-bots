@@ -3,6 +3,7 @@
 import json
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from datetime import UTC, datetime
@@ -60,24 +61,44 @@ class SubmissionEligibilityTest(unittest.TestCase):
                 self.assertEqual(assess.run_battle(bot, "StarterBot", "1.0.0").kind, expected)
 
 
-class BotRemovalAssessmentTest(unittest.TestCase):
-    """Run assess() against real commits that delete one bot directory."""
+class ModeratorChangeAssessmentTest(unittest.TestCase):
+    """Run assess() against real commits in a self-contained, published Rumble."""
 
     def setUp(self):
-        # A self-contained Rumble: two template bots and a team, independent of the live bots.
+        # Two template bots and a team, independent of the live bots, published by their owner.
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name)
         self.git("init", "-q")
         shutil.copy(assess.ROOT / ".gitattributes", self.root / ".gitattributes")
-        bots = self.root / "bots"
         for name in ("Lone", "Alpha"):
             copy_template(self.root, "python", name)
-        (bots / "python" / "AlphaTeam").mkdir()
-        (bots / "python" / "AlphaTeam" / "AlphaTeam.json").write_text(json.dumps(
+        team = self.root / "bots" / "python" / "AlphaTeam"
+        team.mkdir()
+        # Bytes, not text: writing text on Windows would give Windows line endings, which bots may not have.
+        (team / "AlphaTeam.json").write_bytes(json.dumps(
             {"name": "AlphaTeam", "version": "1.0.0", "authors": ["Test"], "license": "Apache-2.0",
-             "teamMembers": ["Alpha 1.0.0", "Alpha 1.0.0"]}) + "\n", encoding="utf-8")
-        (bots / "banned.json").write_text('{"bannedOwners": [], "disqualifiedBots": []}\n', encoding="utf-8")
+             "teamMembers": ["Alpha 1.0.0", "Alpha 1.0.0"]}).encode("utf-8") + b"\n")
+        self.write_banned()
+        self.generate("owner")
         self.base = self.commit("fixture")
+
+    def write_banned(self, owners=(), bots=()):
+        banned = {"bannedOwners": [{"account": account} for account in owners],
+                  "disqualifiedBots": [{"bot": bot} for bot in bots]}
+        (self.root / "bots" / "banned.json").write_bytes(json.dumps(banned).encode("utf-8") + b"\n")
+
+    def generate(self, owner):
+        subprocess.run([sys.executable, str(assess.ROOT / "scripts" / "validate_bot.py"), "--root", str(self.root),
+                        "--owner", owner, "--generate"], check=True, capture_output=True)
+
+    def assess_head(self, owner="moderator"):
+        head = self.commit("change")
+        with patch.object(assess, "ROOT", self.root):
+            return assess.assess(self.base, head, owner)
+
+    def assess_removal(self, bot_path, owner="moderator"):
+        self.git("rm", "-rq", bot_path)
+        return self.assess_head(owner)
 
     def tearDown(self):
         self.temporary.cleanup()
@@ -91,21 +112,47 @@ class BotRemovalAssessmentTest(unittest.TestCase):
         self.git("commit", "-q", "-m", message)
         return self.git("rev-parse", "HEAD")
 
-    def assess_removal(self, bot_path):
-        self.git("rm", "-rq", bot_path)
-        head = self.commit("remove")
-        with patch.object(assess, "ROOT", self.root):
-            return assess.assess(self.base, head, "tester")
-
     def test_removing_one_bot_goes_to_moderators(self):
         verdict = self.assess_removal("bots/python/Lone")
-        self.assertEqual(("escalate", "Bot removal needs moderator review: bots/python/Lone"),
+        self.assertEqual(("escalate", "Moderator change needs review: removed bots/python/Lone"),
                          (verdict.kind, verdict.reason))
 
     def test_removing_a_team_member_is_rejected(self):
         verdict = self.assess_removal("bots/python/Alpha")
         self.assertEqual("reject", verdict.kind)
         self.assertIn("unknown team member `Alpha 1.0.0`", verdict.reason)
+
+    def test_disqualifying_and_removing_a_team_member_is_rejected(self):
+        self.write_banned(bots=["Alpha"])
+        verdict = self.assess_removal("bots/python/Alpha")
+        self.assertEqual("reject", verdict.kind)
+        self.assertIn("unknown team member `Alpha 1.0.0`", verdict.reason)
+
+    def test_disqualifying_goes_to_moderators(self):
+        self.write_banned(bots=["Alpha"])
+        verdict = self.assess_head()
+        self.assertEqual(("escalate", "Moderator change needs review: banned.json changed"),
+                         (verdict.kind, verdict.reason))
+
+    def test_a_removal_is_not_judged_by_its_authors_governance(self):
+        self.write_banned(owners=["moderator"])
+        self.base = self.commit("ban the account")
+        self.assertEqual("escalate", self.assess_removal("bots/python/Lone").kind)
+
+    def test_restoring_a_disqualified_bot_that_was_removed_goes_to_moderators(self):
+        lone = self.root / "bots" / "python" / "Lone"
+        saved = self.root.parent / f"{self.root.name}-Lone"
+        shutil.copytree(lone, saved)
+        self.addCleanup(shutil.rmtree, saved, True)
+        self.git("rm", "-rq", "bots/python/Lone")
+        self.write_banned(bots=["Lone"])
+        self.generate("moderator")
+        self.base = self.commit("disqualify and remove Lone")
+
+        shutil.copytree(saved, lone)  # the exact bytes of the disqualified version
+        verdict = self.assess_head(owner="someone")
+        self.assertEqual("escalate", verdict.kind)
+        self.assertIn("Lone 1.0.0 matches an existing catalog entry", verdict.reason)
 
 
 class ExactCommitDecisionTest(unittest.TestCase):
@@ -412,10 +459,11 @@ class CatalogVerificationTest(unittest.TestCase):
             self.assertEqual((SHA, base), verify_catalog.verify(12, 7))
             self.assertEqual([("--", "bots/banned.json")], compared)
 
-            # Deleting banned.json is not a moderator change; generation needs the file.
-            files[:] = [{"filename": "bots/banned.json", "status": "removed"}]
-            with self.assertRaisesRegex(verify_catalog.VerificationError, "exactly one bot directory"):
-                verify_catalog.verify(12, 7)
+            # Deleting banned.json, or renaming a file onto it, is not a moderator change.
+            for status in ("removed", "renamed"):
+                files[:] = [{"filename": "bots/banned.json", "status": status}]
+                with self.assertRaisesRegex(verify_catalog.VerificationError, "exactly one bot directory"):
+                    verify_catalog.verify(12, 7)
             files[:] = [{"filename": "bots/banned.json", "status": "modified"}]
 
             files.append({"filename": "bots/java/Other/Other.json", "status": "added"})

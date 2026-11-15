@@ -261,8 +261,8 @@ def smoke_bot(bot: Bot) -> None:
         raise ValidationError(f"{bot.directory}: source-run smoke check failed: {completed.stderr.strip() or completed.stdout.strip()}")
 
 
-def disqualified_bot_names(root: Path) -> set[str]:
-    return {entry["bot"] for entry in read_json(root / "bots" / "banned.json").get("disqualifiedBots", [])}
+def disqualified_bot_names(banned: dict[str, Any]) -> set[str]:
+    return {entry["bot"] for entry in banned.get("disqualifiedBots", [])}
 
 
 def excluded_bot_names(bots: list[Bot], disqualified: set[str]) -> set[str]:
@@ -295,19 +295,18 @@ def check_governance(bots: list[Bot], root: Path, owner: str) -> None:
     owners = read_json(root / "bots" / "owners.json") if (root / "bots" / "owners.json").exists() else {"owners": []}
     banned = read_json(root / "bots" / "banned.json")
     banned_accounts = {entry["account"] for entry in banned.get("bannedOwners", [])}
-    disqualified_names = {entry["bot"] for entry in banned.get("disqualifiedBots", [])}
+    disqualified_names = disqualified_bot_names(banned)
     if owner in banned_accounts:
         raise ValidationError(f"owner `{owner}` is banned from submissions")
     catalog_entries = read_json(root / "bots" / "index.json").get("bots", []) if (root / "bots" / "index.json").exists() else []
     catalog_by_name = {entry["name"]: entry for entry in catalog_entries if entry.get("status") == "active"}
     submitted_bots = unpublished_bots(bots, catalog_entries)
-    excluded = excluded_bot_names(submitted_bots, disqualified_names)
     owner_by_bot = {name: record for record in owners.get("owners", []) for name in record.get("bots", [])}
     seen_skeletons: dict[str, str] = {}
     for bot in submitted_bots:
         if bot.name in disqualified_names:
             raise ValidationError(f"bot `{bot.name}` is disqualified")
-        if bot.name in excluded:
+        if any(member.name in disqualified_names for member in bot.team_members):
             raise ValidationError(f"team `{bot.name}` has a disqualified member")
         bot_skeleton = skeleton(bot.name)
         previous = seen_skeletons.get(bot_skeleton)
@@ -330,7 +329,7 @@ def check_governance(bots: list[Bot], root: Path, owner: str) -> None:
 
 def generated_catalog(bots: list[Bot], root: Path, owner: str, generated_at: datetime | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
     generated_at = generated_at or datetime.now(UTC)
-    disqualified_names = disqualified_bot_names(root)
+    disqualified_names = disqualified_bot_names(read_json(root / "bots" / "banned.json"))
     # Disqualified bots, and teams with a disqualified member, stay in the tree but are published as disqualified.
     excluded = excluded_bot_names(bots, disqualified_names)
     existing_owners = read_json(root / "bots" / "owners.json") if (root / "bots" / "owners.json").exists() else {"schemaVersion": 1, "owners": []}
@@ -366,26 +365,27 @@ def generated_catalog(bots: list[Bot], root: Path, owner: str, generated_at: dat
         ],
     }
     today = generated_at.date().isoformat()
+    # Each bot version has one entry whose status is its current state: active or disqualified while it is the
+    # bot's version in the tree, otherwise superseded or retired, or disqualified while its name is banned.
     history = []
+    published_entries: dict[tuple[Any, Any], dict[str, Any]] = {}
     for entry in existing_catalog.get("bots", []):
-        current = current_by_name.get(entry.get("name"))
-        if entry.get("status") != "active":
-            history.append(entry)  # superseded, retired and disqualified entries stay as history
-        elif current is None:  # the bot's directory was removed
-            history.append(entry | {"status": "disqualified" if entry.get("name") in disqualified_names else "retired"})
-        elif entry.get("version") != current.config["version"]:
-            history.append(entry | {"status": "superseded"})
-        # An entry for the current version is published again below, as active or disqualified.
-    recorded = {(entry.get("name"), entry.get("version"), entry.get("sourceHash"))
-                for entry in history if entry.get("status") == "disqualified"}
+        name, version, status = entry.get("name"), entry.get("version"), entry.get("status")
+        current = current_by_name.get(name)
+        if status in ("active", "disqualified"):
+            published_entries.setdefault((name, version), entry)
+        if current is not None and current.config["version"] == version:
+            continue  # the current version is published again below
+        if status in ("active", "disqualified"):
+            if name in disqualified_names:
+                status = "disqualified"
+            else:
+                status = "retired" if current is None else "superseded"
+        history.append(entry | {"status": status})
     published = []
     for bot in sorted(bots, key=lambda item: item.name.casefold()):
+        previous = published_entries.get((bot.name, bot.config["version"]))
         status = "disqualified" if bot.name in excluded else "active"
-        if status == "disqualified" and (bot.name, bot.config["version"], bot.source_hash) in recorded:
-            continue  # already recorded; disqualifying a reinstated bot again adds no duplicate
-        previous = next((entry for entry in existing_catalog.get("bots", [])
-                         if entry.get("name") == bot.name and entry.get("version") == bot.config["version"]
-                         and entry.get("status") in ("active", "disqualified")), None)
         team_members = list(bot.team_member_identities)
         published.append({"name": bot.name, "version": bot.config["version"], "platform": bot.platform, "path": bot.directory.relative_to(root).as_posix(), "sourceHash": bot.source_hash, "owner": owner_by_bot.get(bot.name, owner), "authors": bot.config["authors"], "addedAt": previous.get("addedAt", today) if previous else today, "status": status, "teamMembers": team_members})
     catalog = {"schemaVersion": 1, "generatedAt": generated_at.replace(microsecond=0).isoformat().replace("+00:00", "Z"), "commit": os.environ.get("GITHUB_SHA", "local"), "bots": history + published}

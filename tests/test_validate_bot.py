@@ -230,8 +230,7 @@ class ValidatorIntegrationTests(unittest.TestCase):
         self.disqualify()
         result = self.run_validator("--generate", owner="moderator")
         self.assertEqual(0, result.returncode, result.stderr)
-        self.assertEqual({"Crazy": ["disqualified", "active"], "CornersCrazy": ["disqualified", "active"]},
-                         self.statuses("Crazy", "CornersCrazy"))
+        self.assertEqual({"Crazy": ["active"], "CornersCrazy": ["active"]}, self.statuses("Crazy", "CornersCrazy"))
         catalog = json.loads((self.root / "bots" / "index.json").read_text(encoding="utf-8"))
         crazy = next(entry for entry in catalog["bots"] if entry["name"] == "Crazy" and entry["status"] == "active")
         self.assertEqual(TEST_OWNER, crazy["owner"])
@@ -275,6 +274,25 @@ class ValidatorIntegrationTests(unittest.TestCase):
         result = self.run_validator("--generate", owner="moderator")
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertEqual({"SpinBot": ["disqualified"]}, self.statuses("SpinBot"))
+
+        # Lifting the ban leaves the removed bot retired, not disqualified.
+        self.disqualify()
+        self.assertEqual(0, self.run_validator("--generate", owner="moderator").returncode)
+        self.assertEqual({"SpinBot": ["retired"]}, self.statuses("SpinBot"))
+
+    def test_rolling_back_to_a_superseded_version_keeps_one_entry_per_version(self) -> None:
+        config_path = self.root / "bots" / "java" / "SpinBot" / "SpinBot.json"
+        original = config_path.read_bytes()
+        self.assertEqual(0, self.run_validator("--generate").returncode)
+        config = json.loads(original)
+        config["version"] = "1.0.4"
+        config_path.write_text(json.dumps(config), encoding="utf-8")
+        self.assertEqual(0, self.run_validator("--generate").returncode)
+        config_path.write_bytes(original)
+        self.assertEqual(0, self.run_validator("--generate").returncode)
+        catalog = json.loads((self.root / "bots" / "index.json").read_text(encoding="utf-8"))
+        self.assertEqual([("1.0.4", "superseded"), ("1.0.0", "active")],
+                         [(entry["version"], entry["status"]) for entry in catalog["bots"] if entry["name"] == "SpinBot"])
 
     def test_new_bot_from_another_owner_ignores_unchanged_catalog_entries(self) -> None:
         self.assertEqual(0, self.run_validator("--generate").returncode)
