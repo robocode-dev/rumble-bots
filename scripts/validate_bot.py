@@ -320,6 +320,8 @@ def generated_catalog(bots: list[Bot], root: Path, owner: str, generated_at: dat
     for owner_id, names in records.items():
         owner_record = owners.setdefault(owner_id, {"accounts": [owner_id], "bots": set()})
         owner_record["bots"].update(names)
+    current_by_name = {bot.name: bot for bot in bots}
+    # A removed bot's name stays reserved for its owner, but it no longer occupies an active slot.
     owner_data = {
         "schemaVersion": 1,
         "owners": [
@@ -327,23 +329,24 @@ def generated_catalog(bots: list[Bot], root: Path, owner: str, generated_at: dat
                 "ownerId": owner_id,
                 "accounts": owner_record["accounts"],
                 "bots": sorted(owner_record["bots"]),
-                "activeSlots": len(owner_record["bots"]),
+                "activeSlots": len(owner_record["bots"] & current_by_name.keys()),
             }
             for owner_id, owner_record in sorted(owners.items())
         ],
     }
     today = generated_at.date().isoformat()
-    current_by_name = {bot.name: bot for bot in bots}
     history = []
     for entry in existing_catalog.get("bots", []):
         current = current_by_name.get(entry.get("name"))
-        if current is not None and entry.get("version") != current.config["version"] and entry.get("status") == "active":
-            history.append(entry | {"status": "superseded"})
+        if entry.get("status") != "active":
+            history.append(entry)  # superseded, retired and disqualified entries stay as history
         elif current is None:
-            history.append(entry)
+            history.append(entry | {"status": "retired"})  # the bot's directory was removed
+        elif entry.get("version") != current.config["version"]:
+            history.append(entry | {"status": "superseded"})
     active = []
     for bot in sorted(bots, key=lambda item: item.name.casefold()):
-        previous = next((entry for entry in existing_catalog.get("bots", []) if entry.get("name") == bot.name and entry.get("version") == bot.config["version"]), None)
+        previous = next((entry for entry in existing_catalog.get("bots", []) if entry.get("name") == bot.name and entry.get("version") == bot.config["version"] and entry.get("status") == "active"), None)
         team_members = list(bot.team_member_identities)
         active.append({"name": bot.name, "version": bot.config["version"], "platform": bot.platform, "path": bot.directory.relative_to(root).as_posix(), "sourceHash": bot.source_hash, "owner": owner_by_bot.get(bot.name, owner), "authors": bot.config["authors"], "addedAt": previous.get("addedAt", today) if previous else today, "status": "active", "teamMembers": team_members})
     catalog = {"schemaVersion": 1, "generatedAt": generated_at.replace(microsecond=0).isoformat().replace("+00:00", "Z"), "commit": os.environ.get("GITHUB_SHA", "local"), "bots": history + active}

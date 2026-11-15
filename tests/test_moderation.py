@@ -296,6 +296,69 @@ class CatalogVerificationTest(unittest.TestCase):
             with self.assertRaisesRegex(verify_catalog.VerificationError, "no successful moderator App status"):
                 verify_catalog.verify(12, 7)
 
+    def test_removal_only_source_retires_bots_without_new_ownership(self):
+        base = "c" * 40
+        generated_at = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        catalog = {"bots/index.json": json.dumps({"generatedAt": generated_at}) + "\n", "bots/owners.json": "{}\n"}
+        source = {"merged_at": generated_at, "base": {"ref": "main"}, "head": {"sha": "d" * 40},
+                  "user": {"login": "moderator"}}
+        statuses = [{"context": moderate.CONTEXT, "state": "success", "creator": {"login": verify_catalog.APP_LOGIN}}]
+        files = [{"filename": "bots/python/Orbit/Orbit.json", "status": "removed"},
+                 {"filename": "bots/java/RumbleTestScout/RumbleTestScout.sh", "status": "removed"}]
+        existing: set[str] = set()
+        pending: set[str] = set()
+        compared = []
+
+        def fake_api(method, path, payload=None):
+            if path == "pulls/12":
+                return self.pr
+            if path == "pulls/7":
+                return source
+            if path.startswith("pulls/7/files"):
+                return files
+            if path == f"commits/{'d' * 40}/statuses?per_page=100":
+                return statuses
+            raise AssertionError(path)
+
+        def fake_git(*args):
+            if args in (("rev-parse", "HEAD"), ("rev-parse", f"{SHA}^")):
+                return base
+            if args == ("rev-parse", "refs/remotes/origin/catalog-verify"):
+                return SHA
+            if args[:2] == ("diff", "--name-only"):
+                return "bots/index.json\nbots/owners.json"
+            if args[0] == "show":
+                return catalog[args[1].split(":", 1)[1]].strip()
+            if args[:2] == ("diff", "--quiet"):
+                compared.append(args[4:])
+                return ""
+            raise AssertionError(args)
+
+        with patch.dict("os.environ", {"GITHUB_REPOSITORY": "robocode-dev/rumble-bots"}), patch.object(
+            verify_catalog, "api", side_effect=fake_api
+        ), patch.object(verify_catalog, "unpublished_bot_paths", side_effect=lambda root: pending), patch.object(
+            verify_catalog, "git", side_effect=fake_git), patch.object(
+            verify_catalog.subprocess, "run", return_value=CompletedProcess([], 0, "", "")
+        ), patch.object(verify_catalog.Path, "exists", autospec=True, side_effect=lambda path: path.as_posix() in existing
+        ), patch.object(verify_catalog.Path, "read_text", autospec=True,
+                        side_effect=lambda path, encoding=None: catalog[path.as_posix()]):
+            self.assertEqual((SHA, base), verify_catalog.verify(12, 7))
+            self.assertEqual([("--", "bots/java/RumbleTestScout", "bots/python/Orbit")], compared)
+
+            existing.add("bots/python/Orbit")
+            with self.assertRaisesRegex(verify_catalog.VerificationError, "still exists on main"):
+                verify_catalog.verify(12, 7)
+            existing.clear()
+
+            pending.add("bots/java/Other")
+            with self.assertRaisesRegex(verify_catalog.VerificationError, "Other unpublished bot changes"):
+                verify_catalog.verify(12, 7)
+            pending.clear()
+
+            files.append({"filename": "bots/java/Other/Other.json", "status": "added"})
+            with self.assertRaisesRegex(verify_catalog.VerificationError, "exactly one bot directory"):
+                verify_catalog.verify(12, 7)
+
 
 if __name__ == "__main__":
     unittest.main()

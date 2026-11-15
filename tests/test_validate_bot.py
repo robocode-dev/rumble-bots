@@ -15,6 +15,7 @@ VALIDATOR = REPOSITORY / "scripts" / "validate_bot.py"
 TEST_OWNER = "flemming-n-larsen"
 sys.path.insert(0, str(REPOSITORY / "scripts"))
 from validate_bot import tree_hash  # noqa: E402
+from test_templates import copy_template  # noqa: E402
 
 
 class ValidatorIntegrationTests(unittest.TestCase):
@@ -42,6 +43,18 @@ class ValidatorIntegrationTests(unittest.TestCase):
                 relative_path = bot_directory.relative_to(self.root).as_posix()
                 if bot_directory.is_dir() and relative_path not in owned_paths:
                     shutil.rmtree(bot_directory)
+
+        # The tests need a published Python bot. Build it from the official template rather than
+        # depend on a live Python bot, which may be retired from the Rumble.
+        shutil.rmtree(bots_root / "python", ignore_errors=True)
+        owned_entries = [entry for entry in owned_entries if not entry["path"].startswith("bots/python/")]
+        orbit = copy_template(self.root, "python", "Orbit")
+        orbit_config = json.loads((orbit / "Orbit.json").read_text(encoding="utf-8"))
+        owned_entries.append({"name": "Orbit", "version": orbit_config["version"], "platform": "Python",
+                              "path": "bots/python/Orbit", "sourceHash": tree_hash(orbit), "owner": TEST_OWNER,
+                              "authors": orbit_config["authors"], "addedAt": "2026-10-21", "status": "active",
+                              "teamMembers": []})
+        owner_record["bots"] = sorted(set(owner_record["bots"]) | {"Orbit"})
 
         catalog["bots"] = owned_entries
         owners["owners"] = [owner_record]
@@ -139,8 +152,8 @@ class ValidatorIntegrationTests(unittest.TestCase):
         self.assertIn("without increasing its version", result.stderr)
 
     def test_version_increase_supersedes_the_previous_catalog_entry(self) -> None:
-        # SpinBot has no team member depending on it, unlike Orbit (OrbitVector) and
-        # Corners/Crazy (CornersCrazy), so bumping its version here can't break a team identity.
+        # SpinBot has no team member depending on it, unlike Corners/Crazy (CornersCrazy),
+        # so bumping its version here can't break a team identity.
         self.assertEqual(0, self.run_validator("--generate").returncode)
         config_path = self.root / "bots" / "java" / "SpinBot" / "SpinBot.json"
         config = json.loads(config_path.read_text(encoding="utf-8"))
@@ -150,6 +163,31 @@ class ValidatorIntegrationTests(unittest.TestCase):
         catalog = json.loads((self.root / "bots" / "index.json").read_text(encoding="utf-8"))
         spinbot = [entry for entry in catalog["bots"] if entry["name"] == "SpinBot"]
         self.assertEqual(["superseded", "active"], [entry["status"] for entry in spinbot])
+        # Later regenerations keep the history instead of dropping the superseded entry.
+        self.assertEqual(0, self.run_validator("--generate").returncode)
+        catalog = json.loads((self.root / "bots" / "index.json").read_text(encoding="utf-8"))
+        spinbot = [entry for entry in catalog["bots"] if entry["name"] == "SpinBot"]
+        self.assertEqual([("1.0.0", "superseded"), ("1.0.4", "active")],
+                         [(entry["version"], entry["status"]) for entry in spinbot])
+
+    def test_removed_bot_is_retired_and_its_name_stays_reserved(self) -> None:
+        self.assertEqual(0, self.run_validator("--generate").returncode)
+        shutil.rmtree(self.root / "bots" / "java" / "SpinBot")
+
+        for _ in range(2):  # the retired entry also survives a later regeneration
+            result = self.run_validator("--generate")
+            self.assertEqual(0, result.returncode, result.stderr)
+            catalog = json.loads((self.root / "bots" / "index.json").read_text(encoding="utf-8"))
+            self.assertEqual([("1.0.0", "retired")], [(entry["version"], entry["status"])
+                                                      for entry in catalog["bots"] if entry["name"] == "SpinBot"])
+
+        owners = json.loads((self.root / "bots" / "owners.json").read_text(encoding="utf-8"))
+        record = owners["owners"][0]
+        self.assertIn("SpinBot", record["bots"])
+        active = [entry for entry in catalog["bots"] if entry["status"] == "active"]
+        self.assertEqual(len(active), record["activeSlots"])
+        self.add_java_bot("SpinBot")
+        self.assertIn("belongs to owner", self.run_validator(owner="alice").stderr)
 
     def test_new_bot_from_another_owner_ignores_unchanged_catalog_entries(self) -> None:
         self.assertEqual(0, self.run_validator("--generate").returncode)

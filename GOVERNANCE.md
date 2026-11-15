@@ -4,6 +4,8 @@ The `robocode-dev` organization owns this repository. Human review belongs to th
 
 Moderators maintain `bots/banned.json` through reviewed pull requests. A ban can cover an account or a bot and can be temporary. CI prevents a banned account from submitting and excludes disqualified bots from the generated catalog. Facts in the future `rumble-data` repository are never deleted merely because an entry is disqualified.
 
+To retire bots from the Rumble, a moderator deletes their directories in a pull request that changes nothing else and approves its escalation. The publisher then marks their catalog entries `retired`. Retired entries stay as catalog history, and each name stays reserved for its owner without occupying an active slot.
+
 Moderators resolve name-squatting, lost-account recovery, license complaints, and appeal requests case by case. A credible copyright complaint removes the bot from the working tree and disqualifies it pending resolution.
 
 ## Join the moderator team
